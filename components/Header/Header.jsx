@@ -115,4 +115,37 @@ export const Header = () => {
                 onClick={handleAuthAction}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white text-sm rounded-full shadow-lg hover:shadow-pink-500/30 transition-all"
               >
-                
+                {isLoggedIn ? (
+                  <>
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="h-4 w-4" />
+                    <span>Login</span>
+                  </>
+                )}
+              </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm rounded-full shadow-lg hover:shadow-cyan-500/30 transition-all"
+              >
+                <Rocket className="h-4 w-4" />
+                <span>Launch</span>
+              </motion.button>
+            </div>
+          </nav>
+        </div>
+      </div>
+
+      {/* Animated Glow Effect */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 right-1/4 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl"></div>
+      </div>
+    </motion.header>
+  );
+};

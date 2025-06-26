@@ -344,4 +344,10 @@ export default function Home() {
           </div>
           
           <div className="border-t border-gray-200 mt-8 pt-8 text-center text-sm text-gray-600">
-            <p>&copy; 2025 MindWell. All rights reserved. Not a substitute for professional med
+            <p>&copy; 2025 MindWell. All rights reserved. Not a substitute for professional medical advice.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

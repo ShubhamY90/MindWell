@@ -475,4 +475,307 @@ export default function MentalHealthQuestionnaire() {
               />
               <MoodCard 
                 mood="low" 
+                emoji="😞" 
+                label="Low Energy" 
+                description="Feeling tired, unmotivated, or lacking enthusiasm"
+                onClick={handleMoodSelect}
+                index={3}
+              />
+              <MoodCard 
+                mood="sad" 
+                emoji="😢" 
+                label="Sad" 
+                description="Experiencing feelings of sadness or hopelessness"
+                onClick={handleMoodSelect}
+                index={4}
+              />
+            </div>
+
+            <div className="text-center mt-16 space-y-6">
+              <div className="flex items-center justify-center space-x-6 text-gray-500">
+                <div className="flex items-center space-x-2">
+                  <Shield className="w-5 h-5 text-purple-500" />
+                  <span className="text-sm font-medium">Completely Confidential</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Heart className="w-5 h-5 text-pink-500" />
+                  <span className="text-sm font-medium">Personalized for You</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Waves className="w-5 h-5 text-cyan-500" />
+                  <span className="text-sm font-medium">Science-Based</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (result && result.type === 'happy') {
+    return (
+      <div className="min-h-screen w-screen flex flex-col p-4">
+        <FuturisticBackground />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-4xl mx-auto">
+            <div className="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/30 p-8 md:p-12">
+              <div className="text-center space-y-10">
+                <div className="space-y-6">
+                  <div className="inline-flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-yellow-100/80 via-orange-100/80 to-pink-100/80 backdrop-blur-sm rounded-full border border-white/30 shadow-lg">
+                    <Sparkles className="w-5 h-5 text-yellow-600" />
+                    <span className="font-semibold bg-gradient-to-r from-yellow-700 to-orange-600 bg-clip-text text-transparent">
+                      Celebrating Your Joy!
+                    </span>
+                  </div>
+                  
+                  <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-500 bg-clip-text text-transparent">
+                    That's Wonderful! 🌟
+                  </h2>
+                  
+                  <div className="max-w-3xl mx-auto p-8 bg-gradient-to-br from-yellow-50/80 to-orange-50/80 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg">
+                    <div className="text-6xl mb-6">✨</div>
+                    <blockquote className="text-xl md:text-2xl text-gray-700 font-medium leading-relaxed italic">
+                      "{result.quote}"
+                    </blockquote>
+                  </div>
+                  
+                  <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                    Your happiness is truly beautiful! Keep nurturing these positive moments and remember to share your joy with others. 
+                    Here's an uplifting video to amplify your wonderful energy!
+                  </p>
+                </div>
+
+                <div className="bg-gradient-to-br from-yellow-50/80 to-pink-50/80 backdrop-blur-sm rounded-3xl p-8 space-y-6 border border-white/30">
+                  <div className="flex items-center justify-center space-x-3">
+                    <Heart className="w-6 h-6 text-pink-600" />
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-pink-600 bg-clip-text text-transparent">
+                      Spread the Joy
+                    </h3>
+                  </div>
+                  
+                  <div className="max-w-2xl mx-auto aspect-video rounded-2xl overflow-hidden shadow-2xl border border-white/20">
+                    <iframe
+                      className="w-full h-full"
+                      src={result.video.replace("watch?v=", "embed/")}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title="Happiness Resource"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button 
+                    onClick={resetQuiz}
+                    className="bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-500 hover:from-yellow-600 hover:via-orange-600 hover:to-pink-600 text-white px-10 py-4 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 border border-white/20"
+                  >
+                    <Sparkles className="w-5 h-5 mr-3" />
+                    Share More Joy
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="border-2 border-yellow-300 hover:border-yellow-400 bg-white/80 backdrop-blur-sm px-10 py-4 rounded-2xl font-bold transition-all duration-300 hover:shadow-lg text-yellow-700 hover:text-yellow-800"
+                  >
+                    <ExternalLink className="w-5 h-5 mr-3" />
+                    Spread Positivity
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (result) {
+    return (
+      <div className="min-h-screen w-screen flex flex-col p-4">
+        <FuturisticBackground />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-4xl mx-auto">
+            <div className="bg-white/80 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/30 p-8 md:p-12">
+              <div className="text-center space-y-10">
+                <div className="space-y-6">
+                  <div className="inline-flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-green-100/80 via-emerald-100/80 to-cyan-100/80 backdrop-blur-sm rounded-full border border-white/30 shadow-lg">
+                    <Star className="w-5 h-5 text-emerald-600" />
+                    <span className="font-semibold bg-gradient-to-r from-emerald-700 to-cyan-600 bg-clip-text text-transparent">
+                      Assessment Complete
+                    </span>
+                  </div>
+                  
+                  <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    Your Wellness Profile
+                  </h2>
+                  <p className="text-gray-600 text-xl">{result.message}</p>
+                </div>
+
+                <div className="flex flex-col items-center space-y-8">
+                  <div className={`relative w-40 h-40 rounded-full flex items-center justify-center bg-gradient-to-br ${result.color} shadow-2xl`}>
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 to-transparent"></div>
+                    <div className="relative text-center text-white">
+                      <div className="text-3xl font-bold">{result.score}</div>
+                      <div className="text-sm opacity-90 font-medium">wellness points</div>
+                    </div>
+                    <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-white/10 to-transparent blur-lg"></div>
+                  </div>
+                  
+                  <div className={`px-8 py-3 rounded-full bg-gradient-to-r ${result.color} text-white font-bold text-xl shadow-xl border border-white/20`}>
+                    {result.level}
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-gray-50/80 to-gray-100/80 backdrop-blur-sm rounded-3xl p-8 space-y-6 border border-white/30">
+                  <div className="flex items-center justify-center space-x-3">
+                    <Zap className="w-6 h-6 text-purple-600" />
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                      Curated Resource
+                    </h3>
+                  </div>
+                  
+                  <div className="max-w-2xl mx-auto aspect-video rounded-2xl overflow-hidden shadow-2xl border border-white/20">
+                    <iframe
+                      className="w-full h-full"
+                      src={result.video.replace("watch?v=", "embed/")}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title="Wellness Resource"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button 
+                    onClick={resetQuiz}
+                    className="bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 hover:from-purple-700 hover:via-pink-700 hover:to-cyan-700 text-white px-10 py-4 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 border border-white/20"
+                  >
+                    <RotateCcw className="w-5 h-5 mr-3" />
+                    Take Assessment Again
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="border-2 border-gray-300 hover:border-gray-400 bg-white/80 backdrop-blur-sm px-10 py-4 rounded-2xl font-bold transition-all duration-300 hover:shadow-lg"
+                  >
+                    <ExternalLink className="w-5 h-5 mr-3" />
+                    Explore Resources
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const currentQuestion = questions[currentQuestionIndex];
+
+  return (
+    <div className="min-h-screen w-screen flex flex-col">
+      <FuturisticBackground />
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-4xl mx-auto">
+          <div className="bg-white/80 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/30 p-6 md:p-10">
+            {/* Progress Section */}
+            <div className="mb-12 space-y-6">
+              <div className="flex items-center justify-between text-sm font-semibold text-gray-600">
+                <span className="flex items-center space-x-2">
+                  <Brain className="w-4 h-4" />
+                  <span>Question {currentQuestionIndex + 1} of {questions.length}</span>
+                </span>
+                <span className="bg-gradient-to-r from-purple-600 to-cyan-600 bg-clip-text text-transparent">
+                  {Math.round(progress)}% Complete
+                </span>
+              </div>
               
+              <div className="relative h-3 bg-gray-200/50 rounded-full overflow-hidden">
+                <div 
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 rounded-full transition-all duration-700 ease-out shadow-lg"
+                  style={{ width: `${progress}%` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-full"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Question Section */}
+            <div className="space-y-10">
+              <div className="text-center space-y-6">
+                <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-800 via-purple-700 to-gray-800 bg-clip-text text-transparent leading-relaxed">
+                  {currentQuestion?.text}
+                </h2>
+                
+                {selectedMood === 'happy' ? (
+                  <div className="max-w-2xl mx-auto">
+                    <textarea
+                      className="w-full p-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg text-gray-700 text-lg resize-none focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all duration-300"
+                      rows="4"
+                      placeholder="Share what's bringing you joy today... 🌟"
+                      value={happyResponse}
+                      onChange={(e) => setHappyResponse(e.target.value)}
+                    />
+                    <Button
+                      onClick={() => handleAnswer(0, 0)}
+                      className="mt-6 bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-500 hover:from-yellow-600 hover:via-orange-600 hover:to-pink-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
+                    >
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Continue
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-gray-600 text-lg">
+                      Select the response that best reflects your recent experience:
+                    </p>
+                    <div className="space-y-4 max-w-2xl mx-auto">
+                      {answerOptions.map((option, index) => (
+                        <AnswerOption
+                          key={index}
+                          option={option}
+                          index={index}
+                          isSelected={selectedIndex === index}
+                          isAnimating={selectedIndex === index}
+                          onClick={handleAnswer}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Navigation Section */}
+            <div className="mt-12 flex items-center justify-between">
+              <Button
+                onClick={handlePreviousQuestion}
+                disabled={currentQuestionIndex === 0}
+                className="bg-gray-200/80 hover:bg-gray-300/80 text-gray-700 px-8 py-3 rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm border border-white/30"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Previous
+              </Button>
+
+              <div className="text-center">
+                <p className="text-sm text-gray-500 flex items-center justify-center space-x-2">
+                  <Shield className="w-4 h-4" />
+                  <span>Your privacy is protected</span>
+                </p>
+              </div>
+              
+              <Button
+                onClick={resetQuiz}
+                className="bg-red-100/80 hover:bg-red-200/80 text-red-700 px-8 py-3 rounded-xl font-semibold transition-all duration-300 backdrop-blur-sm border border-white/30"
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
