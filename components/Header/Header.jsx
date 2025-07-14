@@ -67,7 +67,7 @@ export const Header = () => {
             >
               <motion.div whileHover={{ y: -2 }}>
                 <Link 
-                  to="#dashboard" 
+                  to="/chatbot" 
                   className="flex items-center gap-2 text-sm font-medium text-indigo-300 hover:text-white transition-colors"
                 >
                   <Stars className="h-4 w-4" />
@@ -77,7 +77,7 @@ export const Header = () => {
               
               <motion.div whileHover={{ y: -2 }}>
                 <Link 
-                  to="#therapies"
+                  to="/therapies"
                   className="flex items-center gap-2 text-sm font-medium text-indigo-300 hover:text-white transition-colors"
                 >
                   <Atom className="h-4 w-4" />
