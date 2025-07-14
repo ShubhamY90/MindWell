@@ -5,7 +5,7 @@ import { shuffle } from "lodash";
 import getQuestionsByMood from "../components/questions";
 import { Heart, Sparkles, Star, Zap, CheckCircle, ArrowRight, RotateCcw, ExternalLink, ArrowLeft, Brain, Shield, Waves } from "lucide-react";
 import { getAuth } from "firebase/auth";
-import { collection, doc, setDoc, Timestamp } from "firebase/firestore";
+import { collection, doc, setDoc, updateDoc, Timestamp, getDoc, increment } from "firebase/firestore";
 import { db } from "../context/firebase/firebase";
 
 
@@ -407,52 +407,106 @@ export default function MentalHealthQuestionnaire() {
     setShowHappyResult(false);
   };
 
+  
   const saveResultsToFirestore = async (mood, answers, questions, result) => {
     try {
       const user = auth.currentUser;
       if (!user) return;
-
+  
       const today = new Date();
-      const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
-      
-      // Extract concerns (questions with "Often" or "Almost always")
-      const concerns = [];
-      answers.forEach((answerValue, index) => {
-        if (answerValue === 2 || answerValue === 3) {
-          concerns.push({
-            question: questions[index].text,
-            answer: answerOptions.find(opt => opt.value === answerValue)?.label,
-            value: answerValue
-          });
+      const dateStr = today.toISOString().split("T")[0];
+      const timestamp = Timestamp.fromDate(today);
+  
+      // Build concerns list
+      const concerns = answers.map((value, index) => {
+        if (value >= 2) {
+          return {
+            question: questions[index]?.text || "",
+            answer:
+              answerOptions[mood]?.find((opt) => opt.value === value)?.label ||
+              "",
+            value,
+          };
         }
-      });
-
-      // Prepare mood data
-      const moodData = {
-        date: Timestamp.fromDate(today),
+        return null;
+      }).filter(Boolean);
+  
+      // Build assessment data
+      const assessmentData = {
+        date: timestamp,
         moodType: mood,
         score: result?.score || 0,
         level: result?.level || "Happy",
         answers: answers.map((value, index) => ({
-          question: questions[index].text,
-          answer: answerOptions.find(opt => opt.value === value)?.label,
-          value
+          question: questions[index]?.text || "",
+          answer:
+            answerOptions[mood]?.find((opt) => opt.value === value)?.label || "",
+          value,
         })),
         concerns,
-        video: result?.video || videoSuggestions[mood]?.video
+        video: result?.video ?? videoSuggestions[mood]?.video ?? null,
+        summary: happyResponse || null,
       };
-
-      // Save to Firestore
+  
       const userDocRef = doc(db, "users", user.uid);
-      const moodsCollectionRef = collection(userDocRef, "moods");
-      const dateDocRef = doc(moodsCollectionRef, dateStr);
-      
-      await setDoc(dateDocRef, moodData, { merge: true });
-      console.log("Mood data saved successfully");
+  
+      // 1. Save to moodAssessment/{date}/assessments/{autoId}
+      const moodDayRef = collection(userDocRef, `moodAssessment/${dateStr}/assessments`);
+      await setDoc(doc(moodDayRef), assessmentData);
+  
+      // 2. Update moodSummary (flat doc at root of user)
+      const summaryRef = doc(db, "users", user.uid, "moodSummary", "summary");
+      const summarySnap = await getDoc(summaryRef);
+      if (!summarySnap.exists()) {
+        await setDoc(summaryRef, { [mood]: 1 });
+      } else {
+        await updateDoc(summaryRef, { [mood]: increment(1) });
+      }
+  
+      // 3. Update dailyMood/{dateStr}
+      const dailyMoodRef = doc(db, "users", user.uid, "dailyMood", dateStr);
+      const dailySnap = await getDoc(dailyMoodRef);
+  
+      let moodCounts = {};
+      let mostFrequentMood = mood;
+      let latestMood = mood;
+  
+      if (!dailySnap.exists()) {
+        moodCounts[mood] = 1;
+      } else {
+        const prevData = dailySnap.data() || {};
+        const prevCounts = { ...prevData };
+        delete prevCounts.latestMood;
+        delete prevCounts.mostFrequentMood;
+  
+        moodCounts = {
+          ...prevCounts,
+          [mood]: (prevCounts[mood] || 0) + 1,
+        };
+  
+        // Determine most frequent mood
+        let maxCount = 0;
+        for (const key in moodCounts) {
+          if (moodCounts[key] > maxCount) {
+            mostFrequentMood = key;
+            maxCount = moodCounts[key];
+          }
+        }
+      }
+  
+      await setDoc(dailyMoodRef, {
+        ...moodCounts,
+        mostFrequentMood,
+        latestMood,
+      });
+  
+      console.log("✅ Assessment saved and stats updated.");
     } catch (error) {
-      console.error("Error saving mood data: ", error);
+      console.error("❌ Error saving assessment data:", error);
     }
   };
+  
+
 
   const FuturisticBackground = () => (
     <div className="fixed inset-0 -z-10 overflow-hidden">
@@ -707,7 +761,17 @@ export default function MentalHealthQuestionnaire() {
                   <div className="max-w-2xl mx-auto aspect-video rounded-2xl overflow-hidden shadow-2xl border border-white/20">
                     <iframe
                       className="w-full h-full"
-                      src={result.video.replace("watch?v=", "embed/")}
+                      src={result?.video && (
+                        <iframe
+                          width="100%"
+                          height="315"
+                          src={result.video.replace("watch?v=", "embed/")}
+                          title="YouTube video"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      )}
                       frameBorder="0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
@@ -744,6 +808,7 @@ export default function MentalHealthQuestionnaire() {
   const currentQuestion = questions[currentQuestionIndex];
 
   return (
+    
     <div className="min-h-screen w-screen flex flex-col">
       <FuturisticBackground />
       <div className="flex-1 flex items-center justify-center p-4">
