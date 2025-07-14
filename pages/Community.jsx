@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Heart, MessageCircle, Smile, Frown, Meh, Angry, 
   Plus, Search, User, Send, Trash2, Edit, X, Check, 
-  Sun, Moon 
+  Sun, Moon, ThumbsUp, Bookmark, Share2, MoreHorizontal
 } from "lucide-react";
 import { 
   getFirestore,
@@ -13,7 +13,13 @@ import {
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import app from '../context/firebase/firebase';
 import { loadSlim } from "tsparticles-slim";
-import Particles from "../components/Particles.jsx";
+// import Particles from "../components/Particles.jsx";
+
+// Components
+import Post from '../components/Post';
+import CreatePostModal from '../components/CreatePostModal';
+import Sidebar from '../components/Sidebar';
+import SearchPanel from '../components/SearchPanel';
 
 const db = getFirestore(app);
 const auth = getAuth();
@@ -35,6 +41,7 @@ export default function CommunityPage() {
   const [selectedMood, setSelectedMood] = useState("neutral");
   const [postAnonymously, setPostAnonymously] = useState(false);
   const [likedPosts, setLikedPosts] = useState([]);
+  const [bookmarkedPosts, setBookmarkedPosts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [showComments, setShowComments] = useState({});
@@ -46,8 +53,18 @@ export default function CommunityPage() {
   const [editingPostId, setEditingPostId] = useState(null);
   const [editedPostContent, setEditedPostContent] = useState("");
   const [darkMode, setDarkMode] = useState(false);
-  const textareaRef = useRef(null);
-  const editTextareaRef = useRef(null);
+  const [reactions, setReactions] = useState({});
+  const [showReactions, setShowReactions] = useState({});
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchPanelOpen, setSearchPanelOpen] = useState(true);
+
+  const reactionTypes = {
+    like: { icon: <ThumbsUp className="h-4 w-4" />, color: "text-blue-500" },
+    love: { icon: <Heart className="h-4 w-4" />, color: "text-red-500" },
+    laugh: { icon: <Smile className="h-4 w-4" />, color: "text-yellow-500" },
+    sad: { icon: <Frown className="h-4 w-4" />, color: "text-blue-400" },
+    angry: { icon: <Angry className="h-4 w-4" />, color: "text-red-600" }
+  };
 
   // Set system default mode on initial load
   useEffect(() => {
@@ -70,7 +87,7 @@ export default function CommunityPage() {
 
   // Get current user on component mount
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const displayName = user.displayName || 
                          (user.providerData[0]?.displayName) || 
@@ -87,6 +104,21 @@ export default function CommunityPage() {
             .slice(0, 2)
             .toUpperCase()
         });
+
+        // Load user's liked and bookmarked posts
+        const userRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(userRef);
+        
+        if (docSnap.exists()) {
+          setLikedPosts(docSnap.data().likedPosts || []);
+          setBookmarkedPosts(docSnap.data().bookmarkedPosts || []);
+        } else {
+          await setDoc(userRef, { 
+            likedPosts: [], 
+            bookmarkedPosts: [],
+            reactions: {} 
+          });
+        }
       } else {
         setCurrentUser(null);
       }
@@ -107,23 +139,27 @@ export default function CommunityPage() {
     return () => unsubscribe();
   }, []);
 
-  // Load liked posts for current user
+  // Load reactions for posts
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (posts.length === 0) return;
     
-    const fetchLikedPosts = async () => {
-      const userRef = doc(db, "users", currentUser.id);
-      const docSnap = await getDoc(userRef);
+    const loadReactions = async () => {
+      const reactionsData = {};
+      await Promise.all(posts.map(async (post) => {
+        const reactionsRef = collection(db, "posts", post.id, "reactions");
+        const reactionsSnapshot = await getDocs(reactionsRef);
+        reactionsData[post.id] = {};
+        
+        reactionsSnapshot.forEach((doc) => {
+          reactionsData[post.id][doc.id] = doc.data().type;
+        });
+      }));
       
-      if (docSnap.exists()) {
-        setLikedPosts(docSnap.data().likedPosts || []);
-      } else {
-        await setDoc(userRef, { likedPosts: [] });
-      }
+      setReactions(reactionsData);
     };
     
-    fetchLikedPosts();
-  }, [currentUser]);
+    loadReactions();
+  }, [posts]);
 
   // Filter posts based on active tab and search
   useEffect(() => {
@@ -133,6 +169,8 @@ export default function CommunityPage() {
       filtered = filtered.filter(post => post.userId === currentUser?.id);
     } else if (activeTab === "liked") {
       filtered = filtered.filter(post => likedPosts.includes(post.id));
+    } else if (activeTab === "bookmarked") {
+      filtered = filtered.filter(post => bookmarkedPosts.includes(post.id));
     }
     
     if (searchTerm) {
@@ -143,19 +181,7 @@ export default function CommunityPage() {
     }
     
     setFilteredPosts(filtered);
-  }, [posts, activeTab, searchTerm, likedPosts, currentUser]);
-
-  // Auto-resize textareas
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-    }
-    if (editTextareaRef.current && editingPostId) {
-      editTextareaRef.current.style.height = 'auto';
-      editTextareaRef.current.style.height = editTextareaRef.current.scrollHeight + 'px';
-    }
-  }, [newPostContent, editedPostContent, editingPostId]);
+  }, [posts, activeTab, searchTerm, likedPosts, bookmarkedPosts, currentUser]);
 
   const formatTimestamp = (date) => {
     if (!date?.toDate) return "now";
@@ -175,6 +201,7 @@ export default function CommunityPage() {
   const handlePostSubmit = async () => {
     if (!newPostContent.trim() || !currentUser) return;
     
+    setIsLoading(true);
     try {
       await addDoc(collection(db, "posts"), {
         username: postAnonymously ? "Anonymous" : currentUser.username,
@@ -185,6 +212,7 @@ export default function CommunityPage() {
         tags: newPostContent.match(/#\w+/g) || [],
         likes: 0,
         comments: 0,
+        reactions: {},
         timestamp: serverTimestamp(),
         userId: currentUser.id
       });
@@ -195,6 +223,8 @@ export default function CommunityPage() {
       setShowCreateModal(false);
     } catch (error) {
       console.error("Error adding post: ", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -207,16 +237,16 @@ export default function CommunityPage() {
       
       if (likedPosts.includes(postId)) {
         await updateDoc(postRef, {
-          likes: (posts.find(p => p.id === postId)?.likes - 1 || 0
-        )});
+          likes: (posts.find(p => p.id === postId)?.likes - 1 || 0)
+        });
         await updateDoc(userRef, {
           likedPosts: arrayRemove(postId)
         });
         setLikedPosts(prev => prev.filter(id => id !== postId));
       } else {
         await updateDoc(postRef, {
-          likes: (posts.find(p => p.id === postId)?.likes + 1 || 1
-        )});
+          likes: (posts.find(p => p.id === postId)?.likes + 1 || 1)
+        });
         await updateDoc(userRef, {
           likedPosts: arrayUnion(postId)
         });
@@ -224,6 +254,28 @@ export default function CommunityPage() {
       }
     } catch (error) {
       console.error("Error updating like: ", error);
+    }
+  };
+
+  const handleBookmark = async (postId) => {
+    if (!currentUser) return;
+    
+    try {
+      const userRef = doc(db, "users", currentUser.id);
+      
+      if (bookmarkedPosts.includes(postId)) {
+        await updateDoc(userRef, {
+          bookmarkedPosts: arrayRemove(postId)
+        });
+        setBookmarkedPosts(prev => prev.filter(id => id !== postId));
+      } else {
+        await updateDoc(userRef, {
+          bookmarkedPosts: arrayUnion(postId)
+        });
+        setBookmarkedPosts(prev => [...prev, postId]);
+      }
+    } catch (error) {
+      console.error("Error updating bookmark: ", error);
     }
   };
 
@@ -275,6 +327,32 @@ export default function CommunityPage() {
     }
   };
 
+  const handleReaction = async (postId, reactionType) => {
+    if (!currentUser) return;
+    
+    try {
+      const reactionRef = doc(db, "posts", postId, "reactions", currentUser.id);
+      const currentReaction = reactions[postId]?.[currentUser.id];
+      
+      if (currentReaction === reactionType) {
+        // Remove reaction if same type clicked again
+        await deleteDoc(reactionRef);
+      } else {
+        // Add or update reaction
+        await setDoc(reactionRef, {
+          type: reactionType,
+          userId: currentUser.id,
+          timestamp: serverTimestamp()
+        });
+      }
+      
+      // Close reactions popup
+      setShowReactions(prev => ({ ...prev, [postId]: false }));
+    } catch (error) {
+      console.error("Error updating reaction: ", error);
+    }
+  };
+
   const startEditingPost = (post) => {
     setEditingPostId(post.id);
     setEditedPostContent(post.content);
@@ -306,18 +384,36 @@ export default function CommunityPage() {
       try {
         await deleteDoc(doc(db, "posts", postId));
         
+        // Delete all comments for this post
         const commentsRef = collection(db, "posts", postId, "comments");
         const commentsSnapshot = await getDocs(commentsRef);
         commentsSnapshot.forEach(async (commentDoc) => {
           await deleteDoc(commentDoc.ref);
         });
         
+        // Delete all reactions for this post
+        const reactionsRef = collection(db, "posts", postId, "reactions");
+        const reactionsSnapshot = await getDocs(reactionsRef);
+        reactionsSnapshot.forEach(async (reactionDoc) => {
+          await deleteDoc(reactionDoc.ref);
+        });
+        
+        // Update user's liked and bookmarked posts if needed
+        const userRef = doc(db, "users", currentUser.id);
+        const updates = {};
+        
         if (likedPosts.includes(postId)) {
-          const userRef = doc(db, "users", currentUser.id);
-          await updateDoc(userRef, {
-            likedPosts: arrayRemove(postId)
-          });
+          updates.likedPosts = arrayRemove(postId);
           setLikedPosts(prev => prev.filter(id => id !== postId));
+        }
+        
+        if (bookmarkedPosts.includes(postId)) {
+          updates.bookmarkedPosts = arrayRemove(postId);
+          setBookmarkedPosts(prev => prev.filter(id => id !== postId));
+        }
+        
+        if (Object.keys(updates).length > 0) {
+          await updateDoc(userRef, updates);
         }
       } catch (error) {
         console.error("Error deleting post: ", error);
@@ -335,6 +431,16 @@ export default function CommunityPage() {
     return icons[mood] || icons.neutral;
   };
 
+  const countReactions = (postId) => {
+    if (!reactions[postId]) return 0;
+    return Object.keys(reactions[postId]).length;
+  };
+
+  const getUserReaction = (postId) => {
+    if (!currentUser || !reactions[postId]) return null;
+    return reactions[postId][currentUser.id];
+  };
+
   const particlesInit = async (engine) => {
     await loadSlim(engine);
   };
@@ -343,315 +449,149 @@ export default function CommunityPage() {
     console.log("Particles container loaded", container);
   };
 
-  // Toggle dark mode manually
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
 
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  const toggleSearchPanel = () => {
+    setSearchPanelOpen(!searchPanelOpen);
+  };
+
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
-      {/* Particles Background - full width with proper z-index */}
-      <div className="fixed inset-0 -z-50 overflow-hidden">
-        <Particles
-          id="tsparticles"
-          particleColors={darkMode ? ['#ffffff'] : ['#000000']}
-          particleCount={200}
-          particleSpread={15}
-          speed={0.5}
-          particleBaseSize={1.5}
-          moveParticlesOnHover={true}
-          alphaParticles={true}
-          disableRotation={false}
+    <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <div className="flex h-screen overflow-hidden">
+        {/* Sidebar - Bookmarks and Navigation */}
+        <Sidebar 
+          open={sidebarOpen}
+          onToggle={toggleSidebar}
+          bookmarkedPosts={bookmarkedPosts}
+          posts={posts}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          currentUser={currentUser}
+          darkMode={darkMode}
+        />
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Header */}
+          <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center">
+                <button 
+                  onClick={toggleSidebar}
+                  className="mr-4 p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+                >
+                  <Bookmark className="h-5 w-5" />
+                </button>
+                <h1 className="text-xl font-bold">Community</h1>
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                <button 
+                  onClick={toggleDarkMode}
+                  className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                >
+                  {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                </button>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span>New Post</span>
+                </button>
+                <button 
+                  onClick={toggleSearchPanel}
+                  className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content with Posts */}
+          <main className="flex-1 overflow-y-auto p-4">
+            <div className="max-w-2xl mx-auto space-y-6">
+              {filteredPosts.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 dark:text-gray-400">
+                    {activeTab === "all" 
+                      ? "No posts yet. Be the first to share something!"
+                      : activeTab === "my-posts" 
+                        ? "You haven't created any posts yet."
+                        : activeTab === "liked"
+                          ? "You haven't liked any posts yet."
+                          : "You haven't bookmarked any posts yet."}
+                  </p>
+                </div>
+              ) : (
+                filteredPosts.map((post) => (
+                  <Post
+                    key={post.id}
+                    post={post}
+                    currentUser={currentUser}
+                    likedPosts={likedPosts}
+                    bookmarkedPosts={bookmarkedPosts}
+                    showComments={showComments}
+                    newComment={newComment}
+                    comments={comments}
+                    editingPostId={editingPostId}
+                    editedPostContent={editedPostContent}
+                    reactions={reactions}
+                    showReactions={showReactions}
+                    reactionTypes={reactionTypes}
+                    formatTimestamp={formatTimestamp}
+                    getMoodIcon={getMoodIcon}
+                    countReactions={countReactions}
+                    getUserReaction={getUserReaction}
+                    handleLike={handleLike}
+                    handleBookmark={handleBookmark}
+                    toggleComments={toggleComments}
+                    handleCommentSubmit={handleCommentSubmit}
+                    setNewComment={setNewComment}
+                    startEditingPost={startEditingPost}
+                    cancelEditing={cancelEditing}
+                    saveEditedPost={saveEditedPost}
+                    deletePost={deletePost}
+                    handleReaction={handleReaction}
+                    setShowReactions={setShowReactions}
+                  />
+                ))
+              )}
+            </div>
+          </main>
+        </div>
+
+        {/* Search Panel */}
+        <SearchPanel 
+          open={searchPanelOpen}
+          onToggle={toggleSearchPanel}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          darkMode={darkMode}
         />
       </div>
 
-      {/* Main content wrapper */}
-      <div className="relative z-10">
-        <div className="flex">
-          {/* Sidebar with glass effect */}
-          <div className={`w-64 sticky top-16 h-[calc(100vh-4rem)] p-6 border-r ${
-            darkMode ? 'border-gray-800 bg-gray-900/80 backdrop-blur-lg' 
-            : 'border-gray-200 bg-white/80 backdrop-blur-lg'
-          }`}>
-            <div className="mb-8">
-              <h1 className={`text-2xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Community
-              </h1>
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Connect and share your journey
-              </p>
-            </div>
-
-            {/* Dark Mode Toggle */}
-            <div className="mb-6 flex items-center justify-between">
-              <button
-                onClick={toggleDarkMode}
-                className={`p-2 rounded-full ${darkMode ? 'bg-gray-800 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}
-              >
-                {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </button>
-              <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                {darkMode ? 'Light Mode' : 'Dark Mode'}
-              </span>
-            </div>
-
-            {/* Search */}
-            <div className="relative mb-6">
-              <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
-              <input
-                type="text"
-                placeholder="Search posts..."
-                className={`w-full pl-12 pr-4 py-3 rounded-xl text-sm focus:outline-none transition-all ${
-                  darkMode 
-                    ? 'bg-gray-800 border-gray-700 focus:ring-gray-600 focus:border-gray-600 text-white' 
-                    : 'bg-gray-100 border-gray-200 focus:ring-blue-200 focus:border-blue-300 text-gray-900'
-                }`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            {/* Navigation */}
-            <div className="space-y-2">
-              {[
-                { key: "all", label: "All Posts", icon: MessageCircle },
-                { key: "my-posts", label: "My Posts", icon: User },
-                { key: "liked", label: "Liked Posts", icon: Heart }
-              ].map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setActiveTab(key)}
-                  className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
-                    activeTab === key
-                      ? darkMode
-                        ? 'bg-gray-800 text-white shadow-lg'
-                        : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                      : darkMode
-                        ? 'text-gray-300 hover:bg-gray-800'
-                        : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="font-medium">{label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Quick Stats */}
-            <div className={`mt-8 p-4 rounded-xl border ${
-              darkMode 
-                ? 'bg-gray-800 border-gray-700' 
-                : 'bg-gradient-to-br from-blue-50 to-purple-50 border-gray-200'
-            }`}>
-              <h3 className={`font-semibold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                Community Stats
-              </h3>
-              <div className={`space-y-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                <div className="flex justify-between">
-                  <span>Total Posts</span>
-                  <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{posts.length}</span>
-                </div>
-                {currentUser && (
-                  <div className="flex justify-between">
-                    <span>Your Posts</span>
-                    <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {posts.filter(p => p.userId === currentUser.id).length}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="flex-1">
-            <div className="max-w-4xl mx-auto">
-              {/* Posts Feed */}
-              <div className={`divide-y ${darkMode ? 'divide-gray-800/50' : 'divide-gray-200/50'}`}>
-                {filteredPosts.map((post) => (
-                  <div 
-                    key={post.id} 
-                    className={`p-6 transition-all duration-300 ${
-                      darkMode 
-                        ? 'bg-gray-800/30 hover:bg-gray-800/50 backdrop-blur-sm' 
-                        : 'bg-white/30 hover:bg-white/50 backdrop-blur-sm'
-                    }`}
-                  >
-                    <div className="flex gap-4">
-                      {/* Profile Picture or Incognito Glasses */}
-                      <div className={`h-12 w-12 rounded-full flex items-center justify-center font-semibold border-2 shadow-sm ${
-                        darkMode 
-                          ? 'bg-gray-800 border-gray-700 text-gray-300' 
-                          : 'bg-gradient-to-br from-gray-100 to-gray-200 border-white text-gray-600'
-                      }`}>
-                        {post.anonymous ? (
-                          <IncognitoGlasses className="h-6 w-6 text-gray-500" />
-                        ) : (
-                          post.userInitials
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                              {post.username}
-                            </span>
-                            <span className={`text-sm ${darkMode ? 'text-gray-600' : 'text-gray-500'}`}>·</span>
-                            <span className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                              {formatTimestamp(post.timestamp)}
-                            </span>
-                            {getMoodIcon(post.mood)}
-                          </div>
-                          
-                          {/* Edit/Delete buttons */}
-                          {currentUser?.id === post.userId && (
-                            <div className="flex gap-2">
-                              {editingPostId === post.id ? (
-                                <>
-                                  <button
-                                    onClick={cancelEditing}
-                                    className={`p-1 transition-colors ${darkMode ? 'text-gray-400 hover:text-red-500' : 'text-gray-500 hover:text-red-500'}`}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={saveEditedPost}
-                                    className={`p-1 transition-colors ${darkMode ? 'text-gray-400 hover:text-green-500' : 'text-gray-500 hover:text-green-500'}`}
-                                  >
-                                    <Check className="h-4 w-4" />
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => startEditingPost(post)}
-                                    className={`p-1 transition-colors ${darkMode ? 'text-gray-400 hover:text-blue-500' : 'text-gray-500 hover:text-blue-500'}`}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => deletePost(post.id)}
-                                    className={`p-1 transition-colors ${darkMode ? 'text-gray-400 hover:text-red-500' : 'text-gray-500 hover:text-red-500'}`}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {editingPostId === post.id ? (
-                          <textarea
-                            ref={editTextareaRef}
-                            className={`w-full p-3 rounded-xl resize-none focus:outline-none focus:ring-2 transition-all ${
-                              darkMode
-                                ? 'bg-gray-800 border-gray-700 focus:ring-gray-600 focus:border-gray-600 text-white'
-                                : 'bg-gray-50 border-gray-200 focus:ring-blue-200 focus:border-blue-300 text-gray-900'
-                            }`}
-                            value={editedPostContent}
-                            onChange={(e) => setEditedPostContent(e.target.value)}
-                            maxLength={500}
-                          />
-                        ) : (
-                          <>
-                            <p className={`leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                              {post.content}
-                            </p>
-                            
-                            {post.tags?.length > 0 && (
-                              <div className="flex gap-2 flex-wrap">
-                                {post.tags.map((tag, index) => (
-                                  <span 
-                                    key={index} 
-                                    className={`px-3 py-1 text-sm rounded-full font-medium ${
-                                      darkMode
-                                        ? 'bg-gray-800 text-blue-400'
-                                        : 'bg-blue-100 text-blue-600'
-                                    }`}
-                                  >
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </>
-                        )}
-                        
-                        <div className="flex items-center gap-6 pt-4">
-                          <button
-                            onClick={() => handleLike(post.id)}
-                            className={`flex items-center gap-2 text-sm font-medium transition-all hover:scale-105 ${
-                              likedPosts.includes(post.id)
-                                ? 'text-red-500'
-                                : darkMode
-                                  ? 'text-gray-400 hover:text-red-500'
-                                  : 'text-gray-500 hover:text-red-500'
-                            }`}
-                          >
-                            <Heart className={`h-5 w-5 ${likedPosts.includes(post.id) ? 'fill-current' : ''}`} />
-                            <span>{post.likes || 0}</span>
-                          </button>
-                          
-                          <button
-                            onClick={() => toggleComments(post.id)}
-                            className={`flex items-center gap-2 text-sm font-medium transition-all hover:scale-105 ${
-                              darkMode
-                                ? 'text-gray-400 hover:text-blue-500'
-                                : 'text-gray-500 hover:text-blue-600'
-                            }`}
-                          >
-                            <MessageCircle className="h-5 w-5" />
-                            <span>{post.comments || 0}</span>
-                          </button>
-                        </div>
-                        
-                        {/* Comments Section */}
-                        {showComments[post.id] && (
-                          <div className={`mt-6 space-y-4 pt-4 border-t ${
-                            darkMode ? 'border-gray-800/50' : 'border-gray-200/50'
-                          }`}>
-                            {/* ... [keep your existing comments section] ... */}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {filteredPosts.length === 0 && !isLoading && (
-                <div className={`text-center py-12 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  <div className="text-lg mb-2">No posts found</div>
-                  <p className="text-sm">Try adjusting your search or filter settings</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Floating Create Post Button */}
-      {currentUser && (
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className={`fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl transition-all duration-300 hover:scale-105 z-50 flex items-center justify-center ${
-            darkMode
-              ? 'bg-blue-600 hover:bg-blue-700 text-white'
-              : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
-          }`}
-        >
-          <Plus className="h-6 w-6" />
-        </button>
-      )}
-
       {/* Create Post Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          {/* ... [keep your existing modal code] ... */}
-        </div>
-      )}
+      <CreatePostModal
+        show={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        newPostContent={newPostContent}
+        setNewPostContent={setNewPostContent}
+        selectedMood={selectedMood}
+        setSelectedMood={setSelectedMood}
+        postAnonymously={postAnonymously}
+        setPostAnonymously={setPostAnonymously}
+        isLoading={isLoading}
+        handlePostSubmit={handlePostSubmit}
+        darkMode={darkMode}
+      />
     </div>
   );
 }
