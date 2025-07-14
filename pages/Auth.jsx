@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { 
   googleProvider,
   createUserWithEmail as createUser,
-  signInWithEmail as signIn,
+  signInWithEmail,
   signInWithGoogle
 } from '../context/firebase/firebase';
 import { auth, db } from '../context/firebase/firebase';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
-import { useNavigate } from 'react-router-dom'; // For navigation
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 
 import { User, Brain, Lock, Mail, Eye, EyeOff, ArrowRight, Sparkles, Shield } from 'lucide-react';
 
@@ -23,15 +24,15 @@ export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [name, setName] = useState('');
 
+  const navigate = useNavigate();
+
   const handleSignUp = async (email, password, name) => {
     try {
-      const userCredential = await createUser(email, password); // Use the exported function
+      const userCredential = await createUser(email, password);
       await setDoc(doc(db, "users", userCredential.user.uid), {
-        name: name,
-        email: email,
+        name,
+        email,
         userId: userCredential.user.uid,
-        //createdAt: new Date(),
-        //lastLogin: new Date(),
         provider: "email"
       });
       return userCredential;
@@ -39,47 +40,52 @@ export default function Auth() {
       throw error;
     }
   };
-  
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     
     try {
-      await signIn(email, password); // Use the exported function
+      await signInWithEmail(email, password);
       navigate('/');
     } catch (err) {
       setError(err.message);
+    } finally {
       setLoading(false);
     }
   };
-  
+
   const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const result = await signInWithGoogle(); // Use the exported function
+      const result = await signInWithGoogle();
       const user = result.user;
-      
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      
+
+      const userRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userRef);
+
       if (!userDoc.exists()) {
-        await setDoc(doc(db, "users", user.uid), {
+        await setDoc(userRef, {
           email: user.email,
           name: user.displayName,
           userId: user.uid,
-          //photoURL: user.photoURL,
           createdAt: new Date(),
           lastLogin: new Date(),
           provider: "google"
         });
       } else {
-        await updateDoc(doc(db, "users", user.uid), {
+        await updateDoc(userRef, {
           lastLogin: new Date()
         });
       }
-      
+
       navigate('/');
     } catch (error) {
       setError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -102,22 +108,17 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     setError('');
-  
+
     try {
       if (isSignUp) {
-        if (!name) {
-          throw new Error('Please enter your name');
-        }
-        if (!email || !password) {
-          throw new Error('Please fill in all fields');
-        }
+        if (!name) throw new Error('Please enter your name');
+        if (!email || !password) throw new Error('Please fill in all fields');
         await handleSignUp(email, password, name);
       } else {
-        if (!email || !password) {
-          throw new Error('Please fill in all fields');
-        }
-        await signIn(auth, email, password);
+        if (!email || !password) throw new Error('Please fill in all fields');
+        await signInWithEmail(email, password);
       }
+
       navigate('/');
     } catch (error) {
       setError(error.message);
@@ -125,8 +126,6 @@ export default function Auth() {
       setLoading(false);
     }
   };
-
-  const navigate = useNavigate(); // Initialize navigate function
 
 
   return (
