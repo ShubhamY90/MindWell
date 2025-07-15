@@ -36,22 +36,21 @@ export const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
   return (
     <>
-      {/* Fixed positioning container */}
-      <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-4">
+      {/* Fixed positioning container with reduced top padding */}
+      <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2">
         <header 
           className={`
             w-full bg-gradient-to-r from-gray-900/95 via-purple-900/95 to-indigo-900/95 
             backdrop-blur-xl border border-indigo-400/20 shadow-2xl rounded-2xl
             transition-all duration-500 ease-out
             ${isScrolled ? 'max-w-4xl mx-auto shadow-indigo-500/20' : 'max-w-7xl mx-auto'}
-            ${isScrolled ? 'py-3' : 'py-4'}
+            ${isScrolled ? 'py-2' : 'py-3'}
           `}
           style={{
             boxShadow: isScrolled 
@@ -59,21 +58,22 @@ export const Header = () => {
               : '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 60px rgba(139, 92, 246, 0.1)'
           }}
         >
-          <div className="px-6">
+          <div className="px-4 sm:px-6">
             <div className="flex items-center justify-between">
               {/* Logo/Branding */}
-              <div className="flex items-center gap-3 cursor-pointer group">
+              <Link to="/" className="flex items-center gap-2 cursor-pointer group">
                 <div className="relative">
                   <div 
                     className={`
-                      p-2 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full 
+                      p-1.5 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full 
                       transition-all duration-300 group-hover:scale-110
                       ${isScrolled ? 'shadow-lg shadow-indigo-500/30' : 'shadow-xl shadow-indigo-500/40'}
                     `}
                   >
                     <BrainCircuit
-  className={`text-white transition-all duration-1000000000 ${isScrolled ? 'h-5 w-5' : 'h-6 w-6'} animate-spin`}
-/>
+                      className={`text-white transition-all duration-300 ${isScrolled ? 'h-4 w-4' : 'h-5 w-5'}`}
+                      style={{ animation: "spin 8s linear infinite" }}
+                    />
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full opacity-0 group-hover:opacity-40 transition-opacity duration-300 blur-md"></div>
                 </div>
@@ -81,24 +81,24 @@ export const Header = () => {
                   className={`
                     font-bold bg-gradient-to-r from-purple-300 via-pink-300 to-blue-300 
                     bg-clip-text text-transparent tracking-tight transition-all duration-300
-                    ${isScrolled ? 'text-xl' : 'text-2xl'}
+                    ${isScrolled ? 'text-lg' : 'text-xl'}
                   `}
                 >
                   NeuroSync
                 </h1>
-              </div>
+              </Link>
 
               {/* Desktop Navigation */}
               <nav className="hidden lg:flex items-center gap-1">
-                <div className="flex items-center gap-1 px-4 py-2 bg-white/5 rounded-full backdrop-blur-sm border border-white/10">
+                <div className="flex items-center gap-1 px-4 py-1.5 bg-white/5 rounded-full backdrop-blur-sm border border-white/10">
                   <NavItem icon={Stars} label="24/7 Chat" to="/chatbot" />
-<NavItem icon={Atom} label="Mood Tracker" to="/therapies" />
-<NavItem icon={Satellite} label="Hive Network" to="/community" />
+                  <NavItem icon={Atom} label="Mood Tracker" to="/therapies" />
+                  <NavItem icon={Satellite} label="Hive Network" to="/community" />
                 </div>
               </nav>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 {/* Desktop Action Buttons */}
                 <div className="hidden md:flex items-center gap-2">
                   <ActionButton 
@@ -113,12 +113,12 @@ export const Header = () => {
                 {/* Mobile Menu Button */}
                 <button
                   onClick={toggleMobileMenu}
-                  className="md:hidden p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                  className="md:hidden p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                 >
                   {isMobileMenuOpen ? (
-                    <X className="h-5 w-5 text-white" />
+                    <X className="h-4 w-4 text-white" />
                   ) : (
-                    <Menu className="h-5 w-5 text-white" />
+                    <Menu className="h-4 w-4 text-white" />
                   )}
                 </button>
               </div>
@@ -141,43 +141,46 @@ export const Header = () => {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             onClick={toggleMobileMenu}
           ></div>
-          <div className="fixed top-20 left-4 right-4 bg-gradient-to-b from-gray-900/95 to-purple-900/95 backdrop-blur-xl border border-indigo-400/20 rounded-2xl shadow-2xl p-6">
-            <div className="space-y-4">
-              <MobileNavItem icon={Stars} label="24/7 Chat" />
-              <MobileNavItem icon={Atom} label="Mood Tracker" />
-              <MobileNavItem icon={Satellite} label="Hive Network" />
+          <div className="fixed top-16 left-4 right-4 bg-gradient-to-b from-gray-900/95 to-purple-900/95 backdrop-blur-xl border border-indigo-400/20 rounded-2xl shadow-2xl p-4">
+            <div className="space-y-2">
+              <MobileNavItem icon={Stars} label="24/7 Chat" to="/chatbot" />
+              <MobileNavItem icon={Atom} label="Mood Tracker" to="/therapies" />
+              <MobileNavItem icon={Satellite} label="Hive Network" to="/community" />
               <hr className="border-white/10" />
-              <MobileNavItem 
-                icon={isLoggedIn ? LogOut : LogIn} 
-                label={isLoggedIn ? "Logout" : "Login"} 
-                onClick={handleAuthAction}
-              />
+              <div onClick={handleAuthAction}>
+                <MobileNavItem 
+                  icon={isLoggedIn ? LogOut : LogIn} 
+                  label={isLoggedIn ? "Logout" : "Login"} 
+                />
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Spacer to prevent content from going under fixed header */}
-      {/* <div className="h-20"></div> */}
+      {/* Add this to your global CSS for the slower spin animation */}
+      <style jsx global>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 };
 
 const NavItem = ({ icon: Icon, label, to }) => (
-  <Link to={to}>
-    <div className="group relative px-4 py-2 rounded-full hover:bg-white/10 transition-all duration-300 cursor-pointer">
-      <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-indigo-300 group-hover:text-white transition-colors" />
-        <span className="text-sm font-medium text-indigo-300 group-hover:text-white transition-colors">
-          {label}
-        </span>
-      </div>
-      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+  <Link to={to} className="group relative px-3 py-1.5 rounded-full hover:bg-white/10 transition-all duration-300 cursor-pointer">
+    <div className="flex items-center gap-2">
+      <Icon className="h-3.5 w-3.5 text-indigo-300 group-hover:text-white transition-colors" />
+      <span className="text-xs font-medium text-indigo-300 group-hover:text-white transition-colors">
+        {label}
+      </span>
     </div>
+    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
   </Link>
 );
 
-// Action Button Component
 const ActionButton = ({ icon: Icon, label, variant, onClick, isScrolled }) => {
   const variants = {
     indigo: "from-indigo-600 to-purple-600 hover:shadow-indigo-500/40",
@@ -189,14 +192,14 @@ const ActionButton = ({ icon: Icon, label, variant, onClick, isScrolled }) => {
     <button
       onClick={onClick}
       className={`
-        group relative flex items-center gap-2 px-4 py-2 
-        bg-gradient-to-r ${variants[variant]} text-white text-sm rounded-full 
+        group relative flex items-center gap-2 px-3 py-1.5 
+        bg-gradient-to-r ${variants[variant]} text-white text-xs rounded-full 
         shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl
-        ${isScrolled ? 'px-3 py-1.5 text-xs' : ''}
+        ${isScrolled ? 'px-2.5 py-1 text-xs' : ''}
       `}
     >
-      <Icon className={`transition-all duration-300 ${isScrolled ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} />
-      <span className={`font-medium transition-all duration-300 ${isScrolled ? 'text-xs' : 'text-sm'}`}>
+      <Icon className={`transition-all duration-300 ${isScrolled ? 'h-3 w-3' : 'h-3.5 w-3.5'}`} />
+      <span className={`font-medium transition-all duration-300 ${isScrolled ? 'text-xs' : 'text-xs'}`}>
         {label}
       </span>
       <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -204,17 +207,14 @@ const ActionButton = ({ icon: Icon, label, variant, onClick, isScrolled }) => {
   );
 };
 
-// Mobile Navigation Item Component
 const MobileNavItem = ({ icon: Icon, label, to, onClick }) => (
-  <Link to={to} onClick={onClick}>
-    <div className="w-full group flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 transition-all duration-300">
-      <div className="p-2 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-lg group-hover:scale-110 transition-transform">
-        <Icon className="h-5 w-5 text-indigo-300 group-hover:text-white transition-colors" />
-      </div>
-      <span className="text-indigo-300 group-hover:text-white font-medium transition-colors">
-        {label}
-      </span>
+  <Link to={to} onClick={onClick} className="w-full group flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-all duration-300">
+    <div className="p-1.5 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-lg group-hover:scale-110 transition-transform">
+      <Icon className="h-4 w-4 text-indigo-300 group-hover:text-white transition-colors" />
     </div>
+    <span className="text-indigo-300 group-hover:text-white font-medium text-sm transition-colors">
+      {label}
+    </span>
   </Link>
 );
 

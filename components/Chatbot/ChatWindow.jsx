@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, History, Plus, LogOut, Moon, Sun } from 'lucide-react';
 import { signOut } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { auth } from '../../context/firebase/firebase';
 import useChat from '../hooks/useChat';
-import { getAuth } from 'firebase/auth';
 import ChatInput from './ChatInput';
 import MessageBubble from './MessageBubble';
 import LoadingIndicator from './LoadingIndicator';
@@ -13,7 +13,6 @@ const ChatWindow = ({ darkMode, toggleDarkMode }) => {
   const [showHistory, setShowHistory] = useState(true);
   const [sessions, setSessions] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-
   const messagesEndRef = useRef(null);
 
   const {
@@ -24,7 +23,7 @@ const ChatWindow = ({ darkMode, toggleDarkMode }) => {
     sendMessage,
     loadSession,
     clearChat,
-    clearError
+    clearError,
   } = useChat();
 
   const scrollToBottom = () => {
@@ -33,26 +32,19 @@ const ChatWindow = ({ darkMode, toggleDarkMode }) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [showHistory]);
+  }, [messages, showHistory]);
 
   const fetchSessions = async () => {
     setIsLoadingHistory(true);
     try {
-      const auth = getAuth();
-      const currentUser = auth.currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) throw new Error('User not authenticated');
-
       const idToken = await currentUser.getIdToken();
-
       const response = await fetch('http://localhost:4000/api/sessions', {
-        headers: {
-          Authorization: `Bearer ${idToken}`
-        }
+        headers: { Authorization: `Bearer ${idToken}` },
       });
-
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to fetch sessions');
-
       setSessions(data.sessions || []);
     } catch (err) {
       console.error('Error fetching sessions:', err);
@@ -61,26 +53,16 @@ const ChatWindow = ({ darkMode, toggleDarkMode }) => {
     }
   };
 
-  const handleLogout = () => {
-    signOut(auth);
-  };
-
   const handleSelectSession = async (sessionRef) => {
     try {
-      const auth = getAuth();
-      const currentUser = auth.currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) throw new Error('User not authenticated');
-
       const idToken = await currentUser.getIdToken();
       const res = await fetch(`http://localhost:4000/api/sessions/${sessionRef}`, {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
+        headers: { Authorization: `Bearer ${idToken}` },
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load session');
-
       loadSession(data.session);
       setShowHistory(false);
     } catch (err) {
@@ -90,135 +72,160 @@ const ChatWindow = ({ darkMode, toggleDarkMode }) => {
 
   const handleDeleteSession = async (sessionRef) => {
     if (!window.confirm('Are you sure you want to delete this conversation?')) return;
-
     try {
-      const auth = getAuth();
-      const currentUser = auth.currentUser;
+      const currentUser = getAuth().currentUser;
       if (!currentUser) throw new Error('User not authenticated');
-
       const idToken = await currentUser.getIdToken();
-
       const response = await fetch(`http://localhost:4000/api/sessions/${sessionRef}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${idToken}`
-        }
+        headers: { Authorization: `Bearer ${idToken}` },
       });
-      console.log('Delete response:', response);
-
-      if (response.statusText === "OK") {
-        setSessions(prev => prev.filter(s => s.sessionRef !== sessionRef));
+      if (response.ok) {
+        setSessions((prev) => prev.filter((s) => s.sessionRef !== sessionRef));
+      } else {
+        console.error('Failed to delete session');
       }
     } catch (err) {
       console.error('Error deleting session:', err);
     }
   };
 
+  const handleLogout = () => signOut(auth);
   const handleShowHistory = () => {
     setShowHistory(true);
     fetchSessions();
   };
-
   const handleNewChat = () => {
     clearChat();
     setShowHistory(false);
   };
 
   return (
-    <div className={`flex h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Sidebar - History Panel */}
-      <div className={`${showHistory ? 'w-72' : 'w-0'} transition-all duration-300 overflow-hidden ${darkMode ? 'bg-gray-800 border-r border-gray-700' : 'bg-white border-r border-gray-200'}`}>
-        <div className="h-full flex flex-col">
-          {/* <div className="p-4 border-b flex justify-between items-center">
-            <h2 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Chat History</h2>
-            <button
-              onClick={() => setShowHistory(false)}
-              className={`p-1 rounded-md ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
-            >
-              <X size={20} />
-            </button>
-          </div> */}
+    <div className={`w-full h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'} flex flex-col font-sans`}>
+      <header className="w-full h-[81px] flex-shrink-0" />
 
-          <div className="flex-1 overflow-y-auto">
-            <SessionPanel
-              sessions={sessions}
-              onSelectSession={handleSelectSession}
-              onDeleteSession={handleDeleteSession}
-              isLoading={isLoadingHistory}
-              darkMode={darkMode}
-            />
-          </div>
+      {/* Main Content */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Side Panel */}
+        <aside
+          className={`
+            ${showHistory ? 'w-72 p-4' : 'w-0 p-0'}
+            transition-all duration-300 ease-in-out
+            ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'}
+            border-r
+            flex flex-col h-full overflow-hidden
+          `}
+        >
+          {showHistory && (
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className={`text-lg font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>History</h2>
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className={`p-1 rounded-full ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-300'}`}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto -mr-2 pr-2">
+                <SessionPanel
+                  sessions={sessions}
+                  onSelectSession={handleSelectSession}
+                  onDeleteSession={handleDeleteSession}
+                  isLoading={isLoadingHistory}
+                  darkMode={darkMode}
+                />
+              </div>
+              <div className={`pt-4 mt-auto border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <button
+                  onClick={handleLogout}
+                  className={`w-full flex items-center justify-center space-x-2 py-2 px-4 rounded-lg transition-colors ${
+                    darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <LogOut size={16} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </>
+          )}
+        </aside>
 
-          {/* <div className="p-4 border-t"> */}
-            <div className="p-4 border-t flex justify-between items-center">
-              <h2 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Chat History</h2>
-              <button
-                onClick={() => setShowHistory(false)}
-                className={`p-1 rounded-md ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
-              >
-                <X size={20} />
-              </button>
-            </div>
-          {/* </div> */}
-        </div>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col overflow-hidden relative top-26">
-        {/* Header */}
-        <div className={`p-4  ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+        {/* Chat Area */}
+        <main className={`flex-1 flex flex-col ${darkMode ? 'bg-gray-800/80 text-gray-200' : 'bg-white text-gray-900'}`}>
+          {/* Chat Header */}
+          <header className={`p-4 border-b flex items-center justify-between flex-shrink-0 ${
+            darkMode ? 'border-gray-700' : 'border-gray-200'
+          }`}>
+            <div className="flex items-center space-x-3">
               {!showHistory && (
                 <button
                   onClick={handleShowHistory}
-                  className={`p-2 rounded-md ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
+                  className={`p-2 rounded-full ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'}`}
                 >
                   <History size={20} />
                 </button>
               )}
-              {/* <h1 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>AI Assistant</h1> */}
+              <h1 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Assistant
+                {sessionRef && (
+                  <span className={`text-xs ml-2 align-middle font-mono ${
+                    darkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
+                    {sessionRef.split('T')[0]}
+                  </span>
+                )}
+              </h1>
             </div>
-
-            <div className="flex items-center space-x-3">
-              {sessionRef && (
-                <span className={`text-xs px-2 py-1 rounded-md ${darkMode ? 'text-gray-300 bg-gray-700' : 'text-gray-600 bg-gray-100'}`}>
-                  {sessionRef.split('T')[0]}
-                </span>
-              )}
-
+            <div className="flex items-center space-x-2">
               <button
                 onClick={handleNewChat}
-                className={`py-2 px-3 rounded-md text-sm font-medium flex items-center space-x-1 ${darkMode ? 'text-white bg-blue-600 hover:bg-blue-700' : 'text-white bg-blue-500 hover:bg-blue-600'}`}
+                className="flex items-center space-x-2 py-2 px-3 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
               >
                 <Plus size={16} />
-                <span>New chat</span>
+                <span>New Chat</span>
               </button>
-
               <button
                 onClick={toggleDarkMode}
-                className={`p-2 rounded-md ${darkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'}`}
+                className={`p-2 rounded-full ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'}`}
+                aria-label="Toggle theme"
               >
-                {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
             </div>
-          </div>
-        </div>
+          </header>
 
-
-        {/* Messages Area */}
-        <div className={`flex-1 overflow-y-auto ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-          {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center p-6">
-              {/* <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${darkMode ? 'bg-gray-800 text-blue-400' : 'bg-white text-blue-500 shadow-sm'}`}> */}
-              {/* <img src="/rn.jpg" alt="AI Icon" className="w-16 h-16 rounded-full" /> */}
-              {/* </div> */}
-              <h2 className={`text-xl font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>How can I help you today?</h2>
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Ask me anything and I'll provide a detailed response.</p>
-            </div>
-          ) : (
-            <div className="max-w-3xl mx-auto p-4 space-y-4">
-              {messages.map((message, index) => (
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {messages.length === 0 && !isLoading ? (
+              <div className={`text-center h-full flex flex-col justify-center items-center ${
+                darkMode ? 'text-gray-200' : 'text-gray-900'
+              }`}>
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                  darkMode ? 'bg-blue-900/50' : 'bg-blue-100'
+                }`}>
+                  <svg
+                    className={`w-8 h-8 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-semibold">How can I help you today?</h2>
+                <p className={`mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Start a new conversation or select one from history.
+                </p>
+              </div>
+            ) : (
+              messages.map((message, index) => (
                 <MessageBubble
                   key={index}
                   message={message.content}
@@ -227,43 +234,36 @@ const ChatWindow = ({ darkMode, toggleDarkMode }) => {
                   timestamp={message.timestamp}
                   darkMode={darkMode}
                 />
-              ))}
-              {isLoading && <LoadingIndicator darkMode={darkMode} />}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-
-          {error && (
-            <div className={`max-w-3xl mx-auto p-4 ${darkMode ? 'bg-red-900/20 text-red-200' : 'bg-red-50 text-red-700'} rounded-md`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <span className="mr-2">⚠️</span>
-                  <span className="text-sm">{error}</span>
-                </div>
-                <button
-                  onClick={clearError}
-                  className={`text-sm ${darkMode ? 'text-red-300 hover:text-white' : 'text-red-600 hover:text-red-800'}`}
-                >
+              ))
+            )}
+            {isLoading && <LoadingIndicator darkMode={darkMode} />}
+            {error && (
+              <div className={`p-3 rounded-lg flex justify-between items-center text-sm ${
+                darkMode ? 'bg-red-900/50 text-red-300' : 'bg-red-100 text-red-700'
+              }`}>
+                <span>⚠️ {error}</span>
+                <button onClick={clearError} className="font-semibold hover:opacity-80">
                   Dismiss
                 </button>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Input Area */}
-        <div className={`p-4 bg-transparent`}>
-          <div className="max-w-3xl mx-auto bg-transparent">
-            <ChatInput
-              onSendMessage={sendMessage}
-              disabled={isLoading}
-              darkMode={darkMode}
-            />
-            <p className={`text-sm text-center mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              AI assistant may produce inaccurate information.
-            </p>
+            )}
+            <div ref={messagesEndRef} />
           </div>
-        </div>
+
+          {/* Input */}
+          <footer className={`p-4 border-t flex-shrink-0 ${
+            darkMode ? 'border-gray-700' : 'border-gray-200'
+          }`}>
+            <div className="max-w-4xl mx-auto">
+              <ChatInput onSendMessage={sendMessage} disabled={isLoading} darkMode={darkMode} />
+              <p className={`text-xs text-center mt-2 ${
+                darkMode ? 'text-gray-400' : 'text-gray-500'
+              }`}>
+                AI can make mistakes. Consider checking important information.
+              </p>
+            </div>
+          </footer>
+        </main>
       </div>
     </div>
   );

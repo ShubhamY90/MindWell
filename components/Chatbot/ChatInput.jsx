@@ -212,7 +212,7 @@ const ChatInput = ({ onSendMessage, disabled, darkMode }) => {
       {/* Chat Input */}
       <div className="flex items-center space-x-2 w-full bg-transparent">
         <div className="flex-1 bg-transparent relative">
-          <textarea
+        <textarea
             ref={textareaRef}
             value={input}
             onChange={handleInputChange}
@@ -224,7 +224,7 @@ const ChatInput = ({ onSendMessage, disabled, darkMode }) => {
                     "Type your message or use voice input..."
             }
             disabled={isInputDisabled}
-            className={`w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[48px] max-h-32 transition-all duration-200
+            className={`w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y min-h-[50px] max-h-[200px] transition-all duration-200
               ${isInputDisabled ? 'opacity-50 cursor-not-allowed' : ''}
               ${darkMode
                 ? 'bg-gray-700 border border-gray-600 text-white placeholder-gray-400'
