@@ -49,7 +49,7 @@ const SessionsPanel = ({ onSelectSession, darkMode }) => {
     };
 
     return (
-        <div className='p-2'>
+        <div className='p-2 relative top-30'>
             <input
                 type="text"
                 placeholder="Search..."

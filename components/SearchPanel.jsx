@@ -80,7 +80,8 @@ const SearchPanel = ({
       </div>
 
       {/* Search Content */}
-      <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-transparent hover:scrollbar-thumb-indigo-600">
+    
         {open && (
           <>
             {/* Search Input */}
