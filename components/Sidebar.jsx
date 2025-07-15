@@ -55,7 +55,7 @@ const Sidebar = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-transparent hover:scrollbar-thumb-indigo-600">
           <nav className="p-2 space-y-1">
             {tabs.map((tab) => (
               <button

@@ -9,11 +9,11 @@ import MessageBubble from './MessageBubble';
 import LoadingIndicator from './LoadingIndicator';
 import SessionPanel from './SessionPanel';
 
-const ChatWindow = ({darkMode,toggleDarkMode}) => {
+const ChatWindow = ({ darkMode, toggleDarkMode }) => {
   const [showHistory, setShowHistory] = useState(true);
   const [sessions, setSessions] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  
+
   const messagesEndRef = useRef(null);
 
   const {
@@ -129,7 +129,7 @@ const ChatWindow = ({darkMode,toggleDarkMode}) => {
       {/* Sidebar - History Panel */}
       <div className={`${showHistory ? 'w-72' : 'w-0'} transition-all duration-300 overflow-hidden ${darkMode ? 'bg-gray-800 border-r border-gray-700' : 'bg-white border-r border-gray-200'}`}>
         <div className="h-full flex flex-col">
-          <div className="p-4 border-b flex justify-between items-center">
+          {/* <div className="p-4 border-b flex justify-between items-center">
             <h2 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Chat History</h2>
             <button
               onClick={() => setShowHistory(false)}
@@ -137,7 +137,7 @@ const ChatWindow = ({darkMode,toggleDarkMode}) => {
             >
               <X size={20} />
             </button>
-          </div>
+          </div> */}
 
           <div className="flex-1 overflow-y-auto">
             <SessionPanel
@@ -149,15 +149,17 @@ const ChatWindow = ({darkMode,toggleDarkMode}) => {
             />
           </div>
 
-          <div className="p-4 border-t">
-            <button
-              onClick={handleLogout}
-              className={`w-full py-2 px-4 rounded-md text-sm font-medium flex items-center justify-center space-x-2 ${darkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'}`}
-            >
-              <LogOut size={16} />
-              <span>Log out</span>
-            </button>
-          </div>
+          {/* <div className="p-4 border-t"> */}
+            <div className="p-4 border-t flex justify-between items-center">
+              <h2 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Chat History</h2>
+              <button
+                onClick={() => setShowHistory(false)}
+                className={`p-1 rounded-md ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
+              >
+                <X size={20} />
+              </button>
+            </div>
+          {/* </div> */}
         </div>
       </div>
 
@@ -209,7 +211,7 @@ const ChatWindow = ({darkMode,toggleDarkMode}) => {
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center p-6">
               {/* <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${darkMode ? 'bg-gray-800 text-blue-400' : 'bg-white text-blue-500 shadow-sm'}`}> */}
-                {/* <img src="/rn.jpg" alt="AI Icon" className="w-16 h-16 rounded-full" /> */}
+              {/* <img src="/rn.jpg" alt="AI Icon" className="w-16 h-16 rounded-full" /> */}
               {/* </div> */}
               <h2 className={`text-xl font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>How can I help you today?</h2>
               <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Ask me anything and I'll provide a detailed response.</p>

@@ -462,8 +462,9 @@ export default function CommunityPage() {
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-      <div className="flex h-screen overflow-hidden">
+    <div className={`min-h-screen pt-30 ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+  <div className="flex h-[calc(100vh-6rem)] overflow-hidden">
+    {/* Sidebar and content here */}
         {/* Sidebar - Bookmarks and Navigation */}
         <Sidebar 
           open={sidebarOpen}
@@ -477,7 +478,7 @@ export default function CommunityPage() {
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-transparent hover:scrollbar-thumb-indigo-600">
           {/* Header */}
           <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
             <div className="flex justify-between items-center">

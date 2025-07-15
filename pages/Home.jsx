@@ -128,7 +128,7 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="w-full px-4 sm:px-6 lg:px-8 py-12">
-      <div className="absolute inset-0 bg-black/20 rounded-2xl overflow-hidden">
+      <div className="absolute inset-0 bg-black/20 overflow-hidden">
           <img 
             src={HomeImage} 
             alt="Background" 
