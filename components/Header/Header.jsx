@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { BrainCircuit, Stars, Atom, Satellite, ShieldHalf, LogIn, LogOut, Rocket } from "lucide-react";
-import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { BrainCircuit, Stars, Atom, Satellite, ShieldHalf, LogIn, LogOut, Rocket, Menu, X } from "lucide-react";
+import { Link } from 'react-router-dom';
+
 import { getAuth, signOut } from "firebase/auth";
 import app from "../../context/firebase/firebase";
 
 export const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const auth = getAuth(app);
 
   useEffect(() => {
@@ -24,125 +27,195 @@ export const Header = () => {
     }
   };
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
   return (
-    <motion.header 
-      initial={{ y: -100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 100 }}
-      id="header"
-      role="banner"
-      className="w-full bg-gradient-to-r from-gray-800 via-purple-800/90 to-indigo-800/90 backdrop-blur-lg border-b border-indigo-400/30 shadow-lg sticky top-0 z-50"
-    >
-      <div className="max-w-8xl mx-auto px-6">
-        <div className="flex items-center justify-between py-4">
-          {/* Logo/Branding */}
-          <Link to="/" className="flex items-center gap-3">
-            <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="flex items-center gap-3"
-            >
-              <motion.div 
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
-                className="p-2 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full"
-              >
-                <BrainCircuit className="h-6 w-6 text-white" />
-              </motion.div>
-              <motion.h1 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="text-2xl font-bold bg-gradient-to-r from-purple-300 via-pink-300 to-blue-300 bg-clip-text text-transparent tracking-tight"
-              >
-                NeuroSync
-              </motion.h1>
-            </motion.div>
-          </Link>
+    <>
+      {/* Fixed positioning container */}
+      <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-4">
+        <header 
+          className={`
+            w-full bg-gradient-to-r from-gray-900/95 via-purple-900/95 to-indigo-900/95 
+            backdrop-blur-xl border border-indigo-400/20 shadow-2xl rounded-2xl
+            transition-all duration-500 ease-out
+            ${isScrolled ? 'max-w-4xl mx-auto shadow-indigo-500/20' : 'max-w-7xl mx-auto'}
+            ${isScrolled ? 'py-3' : 'py-4'}
+          `}
+          style={{
+            boxShadow: isScrolled 
+              ? '0 25px 50px -12px rgba(99, 102, 241, 0.25), 0 0 80px rgba(139, 92, 246, 0.15)' 
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 60px rgba(139, 92, 246, 0.1)'
+          }}
+        >
+          <div className="px-6">
+            <div className="flex items-center justify-between">
+              {/* Logo/Branding */}
+              <div className="flex items-center gap-3 cursor-pointer group">
+                <div className="relative">
+                  <div 
+                    className={`
+                      p-2 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full 
+                      transition-all duration-300 group-hover:scale-110
+                      ${isScrolled ? 'shadow-lg shadow-indigo-500/30' : 'shadow-xl shadow-indigo-500/40'}
+                    `}
+                  >
+                    <BrainCircuit
+  className={`text-white transition-all duration-1000000000 ${isScrolled ? 'h-5 w-5' : 'h-6 w-6'} animate-spin`}
+/>
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full opacity-0 group-hover:opacity-40 transition-opacity duration-300 blur-md"></div>
+                </div>
+                <h1 
+                  className={`
+                    font-bold bg-gradient-to-r from-purple-300 via-pink-300 to-blue-300 
+                    bg-clip-text text-transparent tracking-tight transition-all duration-300
+                    ${isScrolled ? 'text-xl' : 'text-2xl'}
+                  `}
+                >
+                  NeuroSync
+                </h1>
+              </div>
 
-          {/* Navigation Items */}
-          <nav className="flex items-center gap-6">
-            <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="hidden md:flex items-center gap-6"
-            >
-              <motion.div whileHover={{ y: -2 }}>
-                <Link 
-                  to="/chatbot" 
-                  className="flex items-center gap-2 text-sm font-medium text-indigo-300 hover:text-white transition-colors"
-                >
-                  <Stars className="h-4 w-4" />
-                  <span>24/7 Chat</span>
-                </Link>
-              </motion.div>
-              
-              <motion.div whileHover={{ y: -2 }}>
-                <Link 
-                  to="/therapies"
-                  className="flex items-center gap-2 text-sm font-medium text-indigo-300 hover:text-white transition-colors"
-                >
-                  <Atom className="h-4 w-4" />
-                  <span>Mood Tracker</span>
-                </Link>
-              </motion.div>
-              
-              <motion.div whileHover={{ y: -2 }}>
-                <Link 
-                  to="/community"
-                  className="flex items-center gap-2 text-sm font-medium text-indigo-300 hover:text-white transition-colors"
-                >
-                  <Satellite className="h-4 w-4" />
-                  <span>Hive Network</span>
-                </Link>
-              </motion.div>
-            </motion.div>
+              {/* Desktop Navigation */}
+              <nav className="hidden lg:flex items-center gap-1">
+                <div className="flex items-center gap-1 px-4 py-2 bg-white/5 rounded-full backdrop-blur-sm border border-white/10">
+                  <NavItem icon={Stars} label="24/7 Chat" to="/chatbot" />
+<NavItem icon={Atom} label="Mood Tracker" to="/therapies" />
+<NavItem icon={Satellite} label="Hive Network" to="/community" />
+                </div>
+              </nav>
 
-            <div className="flex items-center gap-4">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm rounded-full shadow-lg hover:shadow-indigo-500/40 transition-all"
-              >
-                <ShieldHalf className="h-4 w-4" />
-                <span>Security</span>
-              </motion.button>
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleAuthAction}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white text-sm rounded-full shadow-lg hover:shadow-pink-500/40 transition-all"
-              >
-                {isLoggedIn ? (
-                  <>
-                    <LogOut className="h-4 w-4" />
-                    <span>Logout</span>
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="h-4 w-4" />
-                    <span>Login</span>
-                  </>
-                )}
-              </motion.button>
-              
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm rounded-full shadow-lg hover:shadow-cyan-500/40 transition-all"
-              >
-                <Rocket className="h-4 w-4" />
-                <span>Launch</span>
-              </motion.button>
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3">
+                {/* Desktop Action Buttons */}
+                <div className="hidden md:flex items-center gap-2">
+                  <ActionButton 
+                    icon={isLoggedIn ? LogOut : LogIn} 
+                    label={isLoggedIn ? "Logout" : "Login"} 
+                    variant="pink"
+                    onClick={handleAuthAction}
+                    isScrolled={isScrolled}
+                  />
+                </div>
+
+                {/* Mobile Menu Button */}
+                <button
+                  onClick={toggleMobileMenu}
+                  className="md:hidden p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  {isMobileMenuOpen ? (
+                    <X className="h-5 w-5 text-white" />
+                  ) : (
+                    <Menu className="h-5 w-5 text-white" />
+                  )}
+                </button>
+              </div>
             </div>
-          </nav>
-        </div>
+          </div>
+
+          {/* Animated Glow Effects */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl">
+            <div className="absolute top-0 left-1/4 w-24 h-24 bg-purple-400/10 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute top-0 right-1/4 w-24 h-24 bg-indigo-400/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-indigo-400/30 to-transparent blur-sm"></div>
+          </div>
+        </header>
       </div>
 
-      {/* Animated Glow Effect */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-32 h-32 bg-purple-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-0 right-1/4 w-32 h-32 bg-indigo-400/20 rounded-full blur-3xl"></div>
-      </div>
-    </motion.header>
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={toggleMobileMenu}
+          ></div>
+          <div className="fixed top-20 left-4 right-4 bg-gradient-to-b from-gray-900/95 to-purple-900/95 backdrop-blur-xl border border-indigo-400/20 rounded-2xl shadow-2xl p-6">
+            <div className="space-y-4">
+              <MobileNavItem icon={Stars} label="24/7 Chat" />
+              <MobileNavItem icon={Atom} label="Mood Tracker" />
+              <MobileNavItem icon={Satellite} label="Hive Network" />
+              <hr className="border-white/10" />
+              <MobileNavItem 
+                icon={isLoggedIn ? LogOut : LogIn} 
+                label={isLoggedIn ? "Logout" : "Login"} 
+                onClick={handleAuthAction}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Spacer to prevent content from going under fixed header */}
+      {/* <div className="h-20"></div> */}
+    </>
   );
 };
+
+const NavItem = ({ icon: Icon, label, to }) => (
+  <Link to={to}>
+    <div className="group relative px-4 py-2 rounded-full hover:bg-white/10 transition-all duration-300 cursor-pointer">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-indigo-300 group-hover:text-white transition-colors" />
+        <span className="text-sm font-medium text-indigo-300 group-hover:text-white transition-colors">
+          {label}
+        </span>
+      </div>
+      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+    </div>
+  </Link>
+);
+
+// Action Button Component
+const ActionButton = ({ icon: Icon, label, variant, onClick, isScrolled }) => {
+  const variants = {
+    indigo: "from-indigo-600 to-purple-600 hover:shadow-indigo-500/40",
+    pink: "from-pink-600 to-rose-600 hover:shadow-pink-500/40",
+    cyan: "from-blue-500 to-cyan-500 hover:shadow-cyan-500/40"
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        group relative flex items-center gap-2 px-4 py-2 
+        bg-gradient-to-r ${variants[variant]} text-white text-sm rounded-full 
+        shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl
+        ${isScrolled ? 'px-3 py-1.5 text-xs' : ''}
+      `}
+    >
+      <Icon className={`transition-all duration-300 ${isScrolled ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} />
+      <span className={`font-medium transition-all duration-300 ${isScrolled ? 'text-xs' : 'text-sm'}`}>
+        {label}
+      </span>
+      <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+    </button>
+  );
+};
+
+// Mobile Navigation Item Component
+const MobileNavItem = ({ icon: Icon, label, to, onClick }) => (
+  <Link to={to} onClick={onClick}>
+    <div className="w-full group flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 transition-all duration-300">
+      <div className="p-2 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-lg group-hover:scale-110 transition-transform">
+        <Icon className="h-5 w-5 text-indigo-300 group-hover:text-white transition-colors" />
+      </div>
+      <span className="text-indigo-300 group-hover:text-white font-medium transition-colors">
+        {label}
+      </span>
+    </div>
+  </Link>
+);
+
+export default Header;
