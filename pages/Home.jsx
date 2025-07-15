@@ -1,38 +1,16 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AOS from 'aos';
-import 'aos/dist/aos.css';
-
 import HomeImage from '../src/assets/HomeImage.png';
-import {
-  MessageCircle,
-  Users,
-  Brain,
-  Heart,
-  Smile,
-  Calendar,
-  ArrowRight,
-  Shield,
-  Clock,
-  Star,
-  Volume2,
-  VolumeX
-} from 'lucide-react';
+import { MessageCircle, Users, Brain, Heart, Smile, Calendar, ArrowRight, Shield, Clock, Star } from 'lucide-react';
 
 export default function Home() {
   const [userMood, setUserMood] = useState(null);
   const [showMoodTest, setShowMoodTest] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState([]);
-  const audioRef = useRef(null);
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const [isMuted, setIsMuted] = useState(() => {
-    const saved = localStorage.getItem("mindwell_audio_muted");
-    return saved === "true"; // default to false if not present
-  });
 
   const navigate = useNavigate();
-  
+
   const moodQuestions = [
     {
       question: "How would you describe your energy level today?",
@@ -75,7 +53,6 @@ export default function Home() {
 //     }
 //   };
 
-
   const startMoodTest = () => {
     navigate("/test");
   };
@@ -85,82 +62,40 @@ export default function Home() {
     alert("Redirecting to our AI wellness companion...");
   };
 
-  useEffect(() => {
-    AOS.init({ duration: 1000, once: true });
-  }, []);
-
-  const handleFirstInteraction = useCallback(() => {
-    if (!hasInteracted && audioRef.current && !isMuted) {
-      audioRef.current.volume = 0.2;
-      const playPromise = audioRef.current.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.log("Playback prevented:", error);
-        });
-      }
-      setHasInteracted(true);
-    }
-  }, [hasInteracted, isMuted]);
-  
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.volume = 0.2;
-      audio.muted = isMuted;
-    }
-  }, [isMuted]);
-  
-  useEffect(() => {
-    const handleInteraction = () => {
-      if (!hasInteracted && !isMuted && audioRef.current) {
-        audioRef.current.play().catch(console.error);
-        setHasInteracted(true);
-      }
-    };
-  
-    window.addEventListener('click', handleInteraction);
-    window.addEventListener('touchstart', handleInteraction);
-  
-    return () => {
-      window.removeEventListener('click', handleInteraction);
-      window.removeEventListener('touchstart', handleInteraction);
-    };
-  }, [hasInteracted, isMuted]);
-
-
-  // Handle mute toggle
-  const toggleMute = useCallback(() => {
-    if (audioRef.current) {
-      const newMuted = !audioRef.current.muted;
-      audioRef.current.muted = newMuted;
-      setIsMuted(newMuted);
-      localStorage.setItem("mindwell_audio_muted", newMuted.toString());
-      
-      if (!newMuted) {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((error) => {
-            console.error("Playback failed:", error);
-          });
-        }
-      }
-    }
-  }, []);
-  
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <audio
-        ref={audioRef}
-        src="/calm.mp3"
-        loop
-        preload="auto"
-        onPlay={() => console.log("Audio playing")}
-        onPause={() => console.log("Audio paused")}
-        onError={(e) => console.error("Audio error:", e)}
-      />
-      
+      {/* Header
+      <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-purple-100">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center space-x-2">
+              <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-2 rounded-lg">
+                <Brain className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                MindWell
+              </span>
+            </div>
+            
+            <nav className="hidden md:flex items-center space-x-8">
+              <a href="#" className="text-gray-700 hover:text-purple-600 transition-colors">Home</a>
+              <a href="#" className="text-gray-700 hover:text-purple-600 transition-colors flex items-center">
+                <Users className="h-4 w-4 mr-1" />
+                Community
+              </a>
+              <a href="#" className="text-gray-700 hover:text-purple-600 transition-colors">Resources</a>
+              <a href="#" className="text-gray-700 hover:text-purple-600 transition-colors">About</a>
+              <button 
+                onClick={handleChatNow}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-full hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Chat Now
+              </button>
+            </nav>
+          </div>
+        </div>
+      </header> */}
 
       {/* Mood Test Modal */}
       {showMoodTest && (
@@ -193,7 +128,7 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="w-full px-4 sm:px-6 lg:px-8 py-12">
-      <div className="absolute inset-0 bg-black/20 rounded-2xl overflow-hidden">
+      <div className="absolute inset-0 bg-black/20 overflow-hidden">
           <img 
             src={HomeImage} 
             alt="Background" 
@@ -201,33 +136,46 @@ export default function Home() {
             loading="lazy"
           />
         </div>
-        <div className="relative z-10 py-24 px-4" >
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 flex justify-center items-center text-center" data-aos="fade-up">
+        <div className="relative z-10 py-24 px-4">
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 flex justify-center items-center text-center">
             Your Mental Wellness
             <br />
             Journey Starts Here
           </h1>
-          <div className="text-center max-w-3xl mx-auto mb-10" data-aos="fade-up">
-            <p className="text-xl text-white/80">
-              Take control of your mental health with personalized support, community connection,
-            </p>
-            <p className="text-xl text-white/80">
-              and evidence-based tools designed to help you thrive.
-            </p>
-          </div>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+            Take control of your mental health with personalized support, community connection, 
+            and evidence-based tools designed to help you thrive.
+          </p>
           
           {/* Mood Status/Test Section */}
-          <div className="text-center mb-12" data-aos="fade-up">
-            <h3 className="text-2xl font-semibold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent mb-6">
-              How are you feeling today?
-            </h3>
-            <button
-              onClick={startMoodTest}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-full text-base font-medium hover:shadow-lg transform hover:scale-105 transition-all duration-200 inline-flex items-center"
-            >
-              <Heart className="h-4 w-4 mr-2" />
-              Take Mood Test
-            </button>
+          <div className="max-w-md mx-auto mb-8">
+            {userMood ? (
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Your Current Mood</h3>
+                <div className={`inline-flex items-center px-4 py-2 rounded-full ${userMood.color} text-lg font-medium`}>
+                  <span className="text-2xl mr-2">{userMood.emoji}</span>
+                  {userMood.text}
+                </div>
+                <button
+                  onClick={startMoodTest}
+                  className="mt-4 text-purple-600 hover:text-purple-700 text-sm font-medium"
+                >
+                  Take test again
+                </button>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">How are you feeling today?</h3>
+                <p className="text-gray-600 mb-4">Take a quick mood assessment to get personalized recommendations</p>
+                <button
+                  onClick={startMoodTest}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-full hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center mx-auto"
+                >
+                  <Heart className="h-4 w-4 mr-2" />
+                  Take Mood Test
+                </button>
+              </div>
+            )}
           </div>
 
           {/* CTA Buttons */}
@@ -247,16 +195,13 @@ export default function Home() {
         </div>
 
         {/* Features Section */}
-        <section id="features" className="mb-16 px-4">
-          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12" data-aos="fade-up">
+        <section id="features" className="mb-16">
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
             Everything you need for better mental health
           </h2>
           
-          <div className="grid md:grid-cols-3 gap-8" data-aos="fade-up">
-            <div 
-              className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
-              data-aos="fade-up" data-aos-delay="0"
-            >
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
               <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-lg w-fit mb-4">
                 <MessageCircle className="h-6 w-6 text-white" />
               </div>
@@ -273,10 +218,7 @@ export default function Home() {
               </button>
             </div>
 
-            <div 
-              className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
-              data-aos="fade-up" data-aos-delay="150"
-            >
+            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
               <div className="bg-gradient-to-r from-green-500 to-teal-600 p-3 rounded-lg w-fit mb-4">
                 <Users className="h-6 w-6 text-white" />
               </div>
@@ -290,10 +232,7 @@ export default function Home() {
               </a>
             </div>
 
-            <div 
-              className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
-              data-aos="fade-up" data-aos-delay="300"
-            >
+            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
               <div className="bg-gradient-to-r from-orange-500 to-red-600 p-3 rounded-lg w-fit mb-4">
                 <Brain className="h-6 w-6 text-white" />
               </div>
@@ -307,41 +246,7 @@ export default function Home() {
               </a>
             </div>
           </div>
-
         </section>
-        <section 
-            id="what-we-do" 
-            className="bg-white py-20 px-4 sm:px-6 lg:px-8 text-center"
-            data-aos="fade-up"
-          >
-            <h2 className="text-4xl font-bold text-gray-800 mb-6">What We Do</h2>
-            <p className="max-w-2xl mx-auto text-gray-600 text-lg mb-12">
-              Our mission is to provide holistic support for mental wellness through education, connection, and compassionate care.
-            </p>
-            <div className="grid md:grid-cols-3 gap-10">
-              <div className="p-6 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl shadow-md" data-aos="fade-up">
-                <Smile className="w-10 h-10 mx-auto text-purple-600 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">Emotional Support</h3>
-                <p className="text-gray-600">
-                  We offer tools and resources that help individuals manage stress, anxiety, and emotional challenges with care.
-                </p>
-              </div>
-              <div className="p-6 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl shadow-md" data-aos="fade-up" data-aos-delay="150">
-                <Calendar className="w-10 h-10 mx-auto text-purple-600 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">Workshops & Programs</h3>
-                <p className="text-gray-600">
-                  Interactive sessions, mindfulness workshops, and healing circles designed for your well-being.
-                </p>
-              </div>
-              <div className="p-6 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl shadow-md" data-aos="fade-up" data-aos-delay="300">
-                <Heart className="w-10 h-10 mx-auto text-purple-600 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">Healing with Compassion</h3>
-                <p className="text-gray-600">
-                  Whether through therapy, community, or AI companions, we ensure you’re never alone in your journey.
-                </p>
-              </div>
-            </div>
-          </section>
 
         {/* Trust Indicators */}
         <section className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 mb-16">
@@ -378,58 +283,16 @@ export default function Home() {
         </section>
 
         {/* Final CTA */}
-        <section 
-          className="relative overflow-hidden text-center rounded-2xl p-12 text-white my-20"
-          data-aos="zoom-in"
-        >
-          {/* Background Image */}
-          <div className="absolute inset-0 z-0">
-            <img
-              src="/homebelow16-3.png"
-              alt="Healing Background"
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-            {/* Optional overlay for better text contrast */}
-            <div className="absolute inset-0 bg-black/20"></div>
-          </div>
-
-          {/* Decorative gradient blobs */}
-          <div className="absolute top-[-30px] left-[-30px] w-40 h-40 bg-purple-400 opacity-30 blur-3xl rounded-full animate-pulse z-10" />
-          <div className="absolute bottom-[-40px] right-[-20px] w-48 h-48 bg-blue-400 opacity-30 blur-2xl rounded-full animate-bounce-slow z-10" />
-
-          {/* Sparkle emojis or icons */}
-          <div className="flex justify-center mb-4 relative z-20" data-aos="fade-up" data-aos-delay="50">
-            <span className="text-4xl">🌟✨💜</span>
-          </div>
-
-          {/* Optimistic Heading */}
-          <h2 
-            className="text-4xl font-bold mb-3 tracking-tight leading-tight relative z-20"
-            data-aos="fade-up"
-            data-aos-delay="150"
-          >
-            Start Your Healing Journey Today
-          </h2>
-
-          {/* Encouraging Paragraph */}
-          <p 
-            className="text-lg mb-8 opacity-90 max-w-xl mx-auto relative z-20"
-            data-aos="fade-up"
-            data-aos-delay="250"
-          >
-            Embrace calm, build resilience, and take the first step toward a better you.
-            You’re never alone — and your peace of mind matters.
+        <section className="text-center bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-12 text-white">
+          <h2 className="text-3xl font-bold mb-4">Ready to start your wellness journey?</h2>
+          <p className="text-lg mb-8 opacity-90">
+            Join thousands who are taking control of their mental health
           </p>
-
-          {/* Call to Action Button */}
           <button 
             onClick={handleChatNow}
-            className="bg-white text-purple-600 px-8 py-4 rounded-full text-lg font-semibold shadow-md hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center mx-auto relative z-20"
-            data-aos="fade-up"
-            data-aos-delay="350"
+            className="bg-white text-purple-600 px-8 py-4 rounded-full text-lg font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center mx-auto"
           >
-            <MessageCircle className="h-5 w-5 mr-2 text-purple-600" />
+            <MessageCircle className="h-5 w-5 mr-2" />
             Begin Your Journey
           </button>
         </section>
@@ -486,17 +349,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-      <button 
-        onClick={toggleMute}
-        className="fixed bottom-4 right-4 z-50 bg-white border border-gray-300 rounded-full shadow-md p-3 hover:shadow-lg transition-all"
-        title={isMuted ? "Unmute sound" : "Mute sound"}
-      >
-        {isMuted ? (
-          <VolumeX className="h-5 w-5 text-purple-600" />
-        ) : (
-          <Volume2 className="h-5 w-5 text-purple-600" />
-        )}
-      </button>
     </div>
   );
 }
