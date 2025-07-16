@@ -328,9 +328,9 @@ export default function Home() {
               </div>
               <div className="p-6 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl shadow-md" data-aos="fade-up" data-aos-delay="150">
                 <Calendar className="w-10 h-10 mx-auto text-purple-600 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">Workshops & Programs</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Resources</h3>
                 <p className="text-gray-600">
-                  Interactive sessions, mindfulness workshops, and healing circles designed for your well-being.
+                  Interactive and mindfulness resources designed for your well-being.
                 </p>
               </div>
               <div className="p-6 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl shadow-md" data-aos="fade-up" data-aos-delay="300">
@@ -456,27 +456,25 @@ export default function Home() {
             <div>
               <h4 className="font-semibold text-gray-800 mb-4">Support</h4>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li><a href="#" className="hover:text-purple-600">Help Center</a></li>
-                <li><a href="#" className="hover:text-purple-600">Crisis Resources</a></li>
-                <li><a href="#" className="hover:text-purple-600">Contact Us</a></li>
+                <li><a href="/resources" className="hover:text-purple-600">Crisis Resources</a></li>
+                <li><a href="mailto:aryabrata.swain.ug23@nsut.ac.in" className="hover:text-purple-600">Contact Us</a></li>
               </ul>
             </div>
             
             <div>
               <h4 className="font-semibold text-gray-800 mb-4">Community</h4>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li><a href="#" className="hover:text-purple-600">Support Groups</a></li>
-                <li><a href="#" className="hover:text-purple-600">Forums</a></li>
-                <li><a href="#" className="hover:text-purple-600">Events</a></li>
+                <li><a href="/community" className="hover:text-purple-600">Hive Network</a></li>
+                <li><a href="/chatbot" className="hover:text-purple-600">24/7 Chat</a></li>
               </ul>
             </div>
             
             <div>
               <h4 className="font-semibold text-gray-800 mb-4">Legal</h4>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li><a href="#" className="hover:text-purple-600">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-purple-600">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-purple-600">Cookie Policy</a></li>
+                <li><a href="/privacy-policy" className="hover:text-purple-600">Privacy Policy</a></li>
+                <li><a href="/terms-of-service" className="hover:text-purple-600">Terms of Service</a></li>
+                <li><a href="/cookie-policy" className="hover:text-purple-600">Cookie Policy</a></li>
               </ul>
             </div>
           </div>

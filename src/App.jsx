@@ -10,6 +10,9 @@ import ChatWindow  from '../components/Chatbot/ChatWindow';
 import { onAuthStateChanged } from 'firebase/auth';
 import MoodDashboard from '../pages/MoodTracker'
 import { auth } from '../context/firebase/firebase';
+import PrivacyPolicy from '../pages/PrivacyPolicy';
+import CookiePolicy from '../pages/CookiePolicy';
+import TermsOfService from '../pages/TermsOfService';
 import './App.css';
 
 function App() {
@@ -52,9 +55,17 @@ function App() {
             <Route path='/auth' element={<Auth/>} />
             <Route path='/community' element={<Community/>} />
             <Route path="/resources" element={<Resources/>} />
-            {currentUser && (
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/cookie-policy" element={<CookiePolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            
+            if (currentUser){currentUser && (
               <Route path="/chatbot" element={ <ChatWindow user={currentUser} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />} />
             )}
+            else{
+              <Route path="/auth" element={<Auth />} />
+            }
+
           </Routes>
         </Suspense>
       </main>
