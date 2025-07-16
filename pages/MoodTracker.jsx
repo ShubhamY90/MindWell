@@ -1,323 +1,717 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Heart, Frown, Zap, AlertCircle, Battery } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { collection, getDocs, doc, setDoc, updateDoc, increment } from "firebase/firestore";
+import { TrendingUp, Heart, Frown, Zap, AlertCircle, Battery, ChevronRight, X, Moon } from 'lucide-react';
+import { collection, getDocs, doc, getDoc, query, where, orderBy, limit, setDoc, updateDoc, increment } from "firebase/firestore";
 import { db, auth } from "../context/firebase/firebase";
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 
 const getDateStr = (date) => date.toLocaleDateString('en-CA'); // YYYY-MM-DD
 
-const MoodLineChartPage = () => {
-  const [chartData, setChartData] = useState([]);
+const MoodDashboard = () => {
+  const [moodData, setMoodData] = useState([]);
+  const [latestTest, setLatestTest] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentQuote, setCurrentQuote] = useState('');
+  const [todayMoodLogged, setTodayMoodLogged] = useState(false);
+  const [latestMood, setLatestMood] = useState(null);
+  const [showMoodPicker, setShowMoodPicker] = useState(false);
+  const [selectedMood, setSelectedMood] = useState(null);
+  const [moodReason, setMoodReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const moodConfig = {
-    happy: { color: '#FDE047', icon: '😊', name: 'Happy', value: 5 },
-    sad: { color: '#60A5FA', icon: '😢', name: 'Sad', value: 2 },
-    stress: { color: '#F87171', icon: '😰', name: 'Stressed', value: 1 },
-    anxious: { color: '#FB923C', icon: '😰', name: 'Anxious', value: 2 },
-    lowEnergy: { color: '#9CA3AF', icon: '😴', name: 'Low Energy', value: 3 }
+    happy: { color: 'bg-yellow-300', icon: '😊', name: 'Happy' },
+    sad: { color: 'bg-blue-400', icon: '😢', name: 'Sad' },
+    stress: { color: 'bg-red-400', icon: '😰', name: 'Stressed' },
+    anxious: { color: 'bg-orange-400', icon: '😰', name: 'Anxious' },
+    lowEnergy: { color: 'bg-gray-400', icon: '😴', name: 'Low Energy' },
+    neutral: { color: 'bg-gray-300', icon: '😐', name: 'Neutral' }
   };
+  
+  const navigate = useNavigate();
 
-  const motivationalQuotes = [
-    "Every day is a new opportunity to shine brighter than yesterday. ✨",
-    "Your mood doesn't define your day, your actions do. 💪",
-    "Progress, not perfection. Every small step counts. 🌟",
-    "Embrace the journey, celebrate the growth. 🌱",
-    "You are stronger than you think and braver than you feel. 🦋",
-    "Today's challenges are tomorrow's victories. 🏆",
-    "Your mental health matters. Take it one breath at a time. 🌸",
-    "Every emotion is valid, every feeling is temporary. 🌈",
-    "You have the power to create positive change in your life. ⚡",
-    "Self-care isn't selfish, it's essential. 💝",
-    "Your story is still being written. Make it beautiful. 📖",
-    "Difficult roads often lead to beautiful destinations. 🌅",
-    "You are enough, exactly as you are right now. 💎",
-    "Growth happens outside your comfort zone. 🚀",
-    "Your resilience is your superpower. 💫"
-  ];
-
-  const fetchMoodData = async (date) => {
+  const fetchLatestMood = async () => {
     try {
       const user = auth.currentUser;
       if (!user) return null;
 
-      const dateStr = getDateStr(date);
-      const assessmentsRef = collection(db, "users", user.uid, "moodAssessment", dateStr, "assessments");
-      const snapshot = await getDocs(assessmentsRef);
+      // Check today's mood first
+      const today = getDateStr(new Date());
+      const todayDocRef = doc(db, "users", user.uid, "dailyMood", today);
+      const todayDocSnap = await getDoc(todayDocRef);
+      
+      if (todayDocSnap.exists()) {
+        const data = todayDocSnap.data();
+        return {
+          date: today,
+          mood: data.latestMood || 'neutral'
+        };
+      }
 
-      if (snapshot.empty) return null;
+      // // Check past 7 days if today doesn't exist
+      // const dates = [];
+      // const dateObj = new Date();
+      // for (let i = 1; i <= 7; i++) {
+      //   const checkDate = new Date(dateObj);
+      //   checkDate.setDate(dateObj.getDate() - i);
+      //   dates.push(getDateStr(checkDate));
+      // }
 
-      const moodScores = { happy: 0, sad: 0, stress: 0, anxious: 0, lowEnergy: 0 };
-      let latestMood = null;
+      // for (const dateStr of dates) {
+      //   const docRef = doc(db, "users", user.uid, "dailyMood", dateStr);
+      //   const docSnap = await getDoc(docRef);
+        
+      //   if (docSnap.exists()) {
+      //     const data = docSnap.data();
+      //     return {
+      //       date: dateStr,
+      //       mood: data.latestMood || 'neutral'
+      //     };
+      //   }
+      // }
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.moodType && moodScores.hasOwnProperty(data.moodType)) {
-          moodScores[data.moodType] += data.score || 1;
-          latestMood = data.moodType;
-        }
-      });
-
-      const dominantMood = Object.entries(moodScores).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-
-      // Save to dailyMood
-      const dailyMoodRef = doc(db, "users", user.uid, "dailyMood", dateStr);
-      await setDoc(dailyMoodRef, {
-        ...moodScores,
-        latestMood: latestMood,
-        mostFrequentMood: dominantMood
-      }, { merge: true });
-
-      // Update moodSummary
-      const summaryRef = doc(db, "users", user.uid, "moodSummary", "summary");
-      await updateDoc(summaryRef, {
-        [latestMood]: increment(1)
-      });
-
-      return {
-        date: dateStr,
-        mood: dominantMood,
-        scores: moodScores
-      };
+      return null;
     } catch (error) {
-      console.error("Error fetching mood data:", error);
+      console.error("Error fetching latest mood:", error);
       return null;
     }
   };
 
-  const loadLast8DaysData = async () => {
-    setLoading(true);
-    const data = [];
-    const today = new Date();
-    
-    for (let i = 7; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      
-      const moodInfo = await fetchMoodData(date);
-      
-      if (moodInfo) {
-        // Calculate average mood score for the day
-        const totalScore = Object.values(moodInfo.scores).reduce((sum, score) => sum + score, 0);
-        const avgValue = totalScore > 0 ? Math.min(5, Math.max(1, totalScore / 5)) : 3;
-        
-        data.push({
-          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          fullDate: date.toLocaleDateString(),
-          mood: moodInfo.mood,
-          value: avgValue,
-          emoji: moodConfig[moodInfo.mood].icon,
-          moodName: moodConfig[moodInfo.mood].name,
-          scores: moodInfo.scores
-        });
-      } else {
-        // No mood data for this day
-        data.push({
-          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          fullDate: date.toLocaleDateString(),
-          mood: 'neutral',
-          value: 3,
-          emoji: '😐',
-          moodName: 'No Data',
-          scores: { happy: 0, sad: 0, stress: 0, anxious: 0, lowEnergy: 0 }
-        });
+  const fetchDailyMoods = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return [];
+
+      const today = new Date();
+      const dates = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        dates.push(getDateStr(date));
       }
+
+      const dailyMoods = [];
+      for (const dateStr of dates) {
+        const docRef = doc(db, "users", user.uid, "dailyMood", dateStr);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          dailyMoods.push({
+            date: dateStr,
+            mood: data.latestMood || 'neutral',
+            isToday: dateStr === getDateStr(today)
+          });
+        } else {
+          dailyMoods.push({
+            date: dateStr,
+            mood: 'neutral',
+            isToday: dateStr === getDateStr(today)
+          });
+        }
+      }
+
+      return dailyMoods;
+    } catch (error) {
+      console.error("Error fetching daily moods:", error);
+      return [];
     }
-    
-    setChartData(data);
-    setLoading(false);
   };
 
-  const getRandomQuote = () => {
-    const today = new Date().toDateString();
-    const savedQuote = sessionStorage.getItem('dailyQuote');
-    const savedDate = sessionStorage.getItem('quoteDate');
+  const logMood = async () => {
+    if (!selectedMood) return;
     
-    if (savedQuote && savedDate === today) {
-      return savedQuote;
+    setSubmitting(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const today = getDateStr(new Date());
+      const moodDocRef = doc(db, "users", user.uid, "dailyMood", today);
+      
+      // Check if document exists
+      const docSnap = await getDoc(moodDocRef);
+      
+      if (docSnap.exists()) {
+        // Document exists, update it
+        const updateData = {
+          latestMood: selectedMood,
+          timestamp: new Date()
+        };
+        
+        // Increment the selected mood counter
+        updateData[selectedMood] = increment(1);
+        
+        await updateDoc(moodDocRef, updateData);
+      } else {
+        // Document doesn't exist, create it with initial structure
+        const allMoods = ['happy', 'sad', 'stress', 'anxious', 'lowEnergy', 'neutral'];
+        const newDocData = {
+          latestMood: selectedMood,
+          mostFrequent: selectedMood, // Set mostFrequent to the selected mood
+          timestamp: new Date()
+        };
+        
+        // Set all mood counts to 0, then set selected mood to 1
+        allMoods.forEach(mood => {
+          newDocData[mood] = mood === selectedMood ? 1 : 0;
+        });
+        
+        await setDoc(moodDocRef, newDocData);
+      }
+
+      // Refresh data
+      await loadData();
+      setShowMoodPicker(false);
+      setSelectedMood(null);
+      setMoodReason('');
+    } catch (error) {
+      console.error("Error logging mood:", error);
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  const checkRecentAssessment = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return false;
+
+      // Check current date and past 7 days for assessments
+      const today = new Date();
+      const dates = [];
+      
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        dates.push(getDateStr(date));
+      }
+
+      for (const dateStr of dates) {
+        // Check if assessment document exists for this date
+        const assessmentDocRef = doc(db, "users", user.uid, "moodAssessment", dateStr);
+        const assessmentDocSnap = await getDoc(assessmentDocRef);
+        
+        if (assessmentDocSnap.exists()) {
+          // Check if there's an assessment subcollection document
+          const assessmentSubDocRef = doc(db, "users", user.uid, "moodAssessment", dateStr, "assessment");
+          const assessmentSubDocSnap = await getDoc(assessmentSubDocRef);
+          
+          if (assessmentSubDocSnap.exists()) {
+            return true; // Found recent assessment
+          }
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Error checking recent assessment:", error);
+      return false;
+    }
+  };
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const [dailyMoods, test, latestMoodData, hasRecentAssessment] = await Promise.all([
+        fetchDailyMoods(),
+        fetchLatestTest(),
+        fetchLatestMood(),
+        checkRecentAssessment()
+      ]);
+      
+      setMoodData(dailyMoods);
+      setLatestTest(test);
+      setLatestMood(latestMoodData);
+      
+      // Check if today's mood is logged
+      const today = getDateStr(new Date());
+      const todayDocRef = doc(db, "users", user.uid, "dailyMood", today);
+      const todayDocSnap = await getDoc(todayDocRef);
+      
+      const moodLoggedToday = todayDocSnap.exists() && todayDocSnap.data().latestMood;
+      setTodayMoodLogged(moodLoggedToday);
+      
+      // Set latest test based on recent assessment check
+      if (hasRecentAssessment) {
+        setLatestTest({ recent: true }); // Mark as recent to hide test option
+      }
+      
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLatestTest = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return null;
+
+      // Check current date and past 7 days for the most recent assessment
+      const today = new Date();
+      const dates = [];
+      
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        dates.push(getDateStr(date));
+      }
+
+      // Check each date for assessments (most recent first)
+      for (const dateStr of dates) {
+        const assessmentDocRef = doc(db, "users", user.uid, "moodAssessment", dateStr);
+        const assessmentDocSnap = await getDoc(assessmentDocRef);
+        
+        if (assessmentDocSnap.exists()) {
+          // Check if there's an assessment subcollection document
+          const assessmentSubDocRef = doc(db, "users", user.uid, "moodAssessment", dateStr, "assessment");
+          const assessmentSubDocSnap = await getDoc(assessmentSubDocRef);
+          
+          if (assessmentSubDocSnap.exists()) {
+            const assessmentData = assessmentSubDocSnap.data();
+            return {
+              id: assessmentSubDocSnap.id,
+              date: dateStr,
+              recent: true, // Within 7 days
+              ...assessmentData
+            };
+          }
+        }
+      }
+
+      // If no recent assessment found, check older assessments
+      const assessmentRef = collection(db, "users", user.uid, "moodAssessment");
+      const assessmentSnapshot = await getDocs(assessmentRef);
+      
+      if (!assessmentSnapshot.empty) {
+        // Found older assessments, return the most recent one
+        let latestAssessment = null;
+        let latestDate = null;
+        
+        for (const dateDoc of assessmentSnapshot.docs) {
+          const assessmentSubDocRef = doc(db, "users", user.uid, "moodAssessment", dateDoc.id, "assessment");
+          const assessmentSubDocSnap = await getDoc(assessmentSubDocRef);
+          
+          if (assessmentSubDocSnap.exists()) {
+            const assessmentData = assessmentSubDocSnap.data();
+            const assessmentDate = new Date(dateDoc.id);
+            
+            if (!latestDate || assessmentDate > latestDate) {
+              latestDate = assessmentDate;
+              latestAssessment = {
+                id: assessmentSubDocSnap.id,
+                date: dateDoc.id,
+                recent: false, // Older than 7 days
+                ...assessmentData
+              };
+            }
+          }
+        }
+        
+        return latestAssessment;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error fetching latest test:", error);
+      return null;
+    }
+  };
+
+  const calculateTrend = (moods) => {
+    if (moods.length < 2) return 'neutral';
     
-    const randomIndex = Math.floor(Math.random() * motivationalQuotes.length);
-    const newQuote = motivationalQuotes[randomIndex];
+    const positiveMoods = ['happy'];
+    const negativeMoods = ['sad', 'stress', 'anxious', 'lowEnergy'];
     
-    sessionStorage.setItem('dailyQuote', newQuote);
-    sessionStorage.setItem('quoteDate', today);
+    let positiveDays = 0;
+    let negativeDays = 0;
     
-    return newQuote;
+    moods.forEach(day => {
+      if (positiveMoods.includes(day.mood)) positiveDays++;
+      if (negativeMoods.includes(day.mood)) negativeDays++;
+    });
+    
+    // Compare first half and second half of the week
+    const firstHalf = moods.slice(0, 3).filter(day => positiveMoods.includes(day.mood)).length;
+    const secondHalf = moods.slice(3).filter(day => positiveMoods.includes(day.mood)).length;
+    
+    if (secondHalf > firstHalf) return 'improving';
+    if (secondHalf < firstHalf) return 'declining';
+    return 'stable';
   };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
-      if (user) {
-        loadLast8DaysData();
-        setCurrentQuote(getRandomQuote());
-      }
+      if (user) loadData();
     });
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const loadData = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        await loadLast8DaysData();
-        setCurrentQuote(getRandomQuote());
-      }
-    };
-
-    loadData();
-  }, []);
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
-          <p className="font-semibold text-gray-800">{data.fullDate}</p>
-          <div className="flex items-center mt-2">
-            <span className="text-2xl mr-2">{data.emoji}</span>
-            <div>
-              <p className="text-sm font-medium text-gray-700">{data.moodName}</p>
-              <p className="text-xs text-gray-500">Score: {data.value.toFixed(1)}</p>
-            </div>
-          </div>
-          {data.scores && (
-            <div className="mt-2 p-2 bg-gray-50 rounded">
-              <p className="text-xs font-medium text-gray-600 mb-1">Mood Breakdown:</p>
-              <div className="grid grid-cols-2 gap-1 text-xs">
-                {Object.entries(data.scores).map(([mood, score]) => (
-                  <div key={mood} className="flex justify-between">
-                    <span className="capitalize">{mood}:</span>
-                    <span className="font-medium">{score}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const CustomDot = (props) => {
-    const { cx, cy, payload } = props;
-    return (
-      <g>
-        <circle cx={cx} cy={cy} r={8} fill="white" stroke="#6366F1" strokeWidth={2} />
-        <text x={cx} y={cy + 1} textAnchor="middle" fontSize="12">
-          {payload.emoji}
-        </text>
-      </g>
-    );
-  };
-
-  const averageMood = chartData.length > 0 ? 
-    (chartData.reduce((sum, day) => sum + day.value, 0) / chartData.length).toFixed(1) : 0;
-
-  const getTrendDirection = () => {
-    if (chartData.length < 2) return 'neutral';
-    const recent = chartData.slice(-3).reduce((sum, day) => sum + day.value, 0) / 3;
-    const earlier = chartData.slice(0, 3).reduce((sum, day) => sum + day.value, 0) / 3;
-    return recent > earlier ? 'up' : recent < earlier ? 'down' : 'neutral';
-  };
-
-  const trend = getTrendDirection();
-
+  const trend = calculateTrend(moodData);
+  const today = new Date();
+  const lastTestDate = latestTest ? new Date(latestTest.date) : null;
+  const daysSinceLastTest = lastTestDate ? Math.floor((today - lastTestDate) / (1000 * 60 * 60 * 24)) : 7;
+  
+  // Logic for showing different panels
+  const showMoodLog = !todayMoodLogged; // Show if today's mood hasn't been logged
+  const showTest = false // Show if no recent assessment
+  const showResources = todayMoodLogged && latestMood; // Show if mood logged AND has latest mood AND test not overdue
+  const isDarkMode = false;
   return (
-    <div
-  className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-6 bg-cover bg-center bg-no-repeat relative overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-transparent hover:scrollbar-thumb-indigo-600"
-  >
-  {/*  <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-transparent hover:scrollbar-thumb-indigo-600"> */}
-      <div className="max-w-6xl mx-auto top-20 relative">
+    <div className={`min-h-screen transition-all duration-500 ${
+      isDarkMode 
+        ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900' 
+        : 'bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50'
+    }`}>
+      {/* Animated background particles */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className={`absolute w-2 h-2 ${isDarkMode ? 'bg-white' : 'bg-indigo-300'} rounded-full opacity-20 animate-pulse`}
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 2}s`,
+              animationDuration: `${2 + Math.random() * 2}s`
+            }}
+          />
+        ))}
+      </div>
 
-        {/* Motivational Quote */}
-        <div className="mb-8 text-center">
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">Today's Inspiration</h2>
-            <p className="text-lg text-gray-700 italic leading-relaxed">
-              "{currentQuote}"
-            </p>
-          </div>
+      <div className="relative z-10 min-h-screen p-6">
+        {/* Theme Toggle */}
+        <div className="fixed top-6 right-6 z-50">
+          <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className={`p-3 rounded-full backdrop-blur-lg transition-all duration-300 hover:scale-110 ${
+              isDarkMode 
+                ? 'bg-white/10 text-white hover:bg-white/20' 
+                : 'bg-black/10 text-gray-800 hover:bg-black/20'
+            }`}
+          >
+            {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+          </button>
         </div>
 
-        {/* Chart Section */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20 bottom-10">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-bold text-gray-800 flex items-center">
-              <TrendingUp className="mr-3 text-indigo-600" size={32} />
-              8-Day Mood Trend
-            </h2>
-            <div className="flex items-center space-x-4">
-              <div className="text-center">
-                <p className="text-sm text-gray-600">Average Mood</p>
-                <p className="text-2xl font-bold text-indigo-600">{averageMood}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-gray-600">Trend</p>
-                <p className={`text-2xl font-bold ${
-                  trend === 'up' ? 'text-green-500' : 
-                  trend === 'down' ? 'text-red-500' : 'text-gray-500'
-                }`}>
-                  {trend === 'up' ? '↗️' : trend === 'down' ? '↘️' : '→'}
+        <div className="max-w-6xl mx-auto transform translate-y-[81px]">
+          {/* Hero Section with Image */}
+          <div className="mb-8 relative">
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+              <img 
+                src="/moodtrackerbg.jpeg" 
+                alt="Mood Tracker Background" 
+                className="w-full h-64 object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute bottom-6 left-6 text-white">
+                <h1 className="text-4xl font-bold mb-2 drop-shadow-lg">
+                  Hey there, beautiful soul ✨
+                </h1>
+                <p className="text-xl opacity-90 drop-shadow-md">
+                  I'm here to walk with you through every emotion, every day
                 </p>
               </div>
             </div>
           </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Side - Mood Summary */}
+            <div className={`relative rounded-3xl shadow-2xl backdrop-blur-lg transition-all duration-300 hover:shadow-3xl ${
+              isDarkMode 
+                ? 'bg-white/5 border border-white/10' 
+                : 'bg-white/80 border border-white/20'
+            }`}>
+              <div className="p-8">
+                <div className="flex items-center mb-6">
+                  <div className={`p-3 rounded-full ${isDarkMode ? 'bg-indigo-500/20' : 'bg-indigo-100'} mr-4`}>
+                    <TrendingUp className={`${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`} size={24} />
+                  </div>
+                  <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {latestMood ? `Your heart spoke on ${new Date(latestMood.date).toLocaleDateString()}` : 'Your emotional journey this week'}
+                  </h2>
+                </div>
+                
+                {loading ? (
+                  <div className="flex justify-center py-12">
+                    <div className={`animate-spin rounded-full h-12 w-12 border-4 border-transparent ${
+                      isDarkMode ? 'border-t-indigo-400' : 'border-t-indigo-600'
+                    }`}></div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Mood Calendar */}
+                    <div className="grid grid-cols-7 gap-3 mb-8">
+                      {moodData.map((day, index) => {
+                        const date = new Date(day.date);
+                        const moodInfo = moodConfig[day.mood] || moodConfig.neutral;
+                        return (
+                          <div key={index} className="flex flex-col items-center group">
+                            <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br ${moodInfo.color} 
+                              flex items-center justify-center text-2xl mb-2 transition-all duration-300 
+                              group-hover:scale-110 group-hover:shadow-lg ${moodInfo.glow} ${
+                              day.isToday ? 'ring-4 ring-indigo-500 ring-opacity-50' : ''
+                            }`}>
+                              {moodInfo.icon}
+                              {day.isToday && (
+                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full animate-pulse" />
+                              )}
+                            </div>
+                            <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                              {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                            </span>
+                            <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              {date.getDate()}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Trend Analysis */}
+                    <div className={`rounded-2xl p-6 ${
+                      isDarkMode ? 'bg-gradient-to-r from-indigo-900/50 to-purple-900/50' : 'bg-gradient-to-r from-indigo-50 to-purple-50'
+                    }`}>
+                      <h3 className={`font-bold text-lg mb-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                        How you've been feeling lately
+                      </h3>
+                      {trend === 'improving' ? (
+                        <div className={`flex items-center ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                          <div className="p-2 rounded-full bg-green-500/20 mr-3">
+                            <Zap size={20} />
+                          </div>
+                          <p className="text-lg">
+                            Your spirit is lifting! I can see the light growing brighter in your days. Keep nurturing that beautiful energy! 🌟
+                          </p>
+                        </div>
+                      ) : trend === 'declining' ? (
+                        <div className={`flex items-center ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`}>
+                          <div className="p-2 rounded-full bg-amber-500/20 mr-3">
+                            <AlertCircle size={20} />
+                          </div>
+                          <p className="text-lg">
+                            I notice you've been carrying some heaviness lately. Remember, I'm here for you, and it's okay to not be okay. Let's find some gentle ways to support you. 💙
+                          </p>
+                        </div>
+                      ) : (
+                        <div className={`flex items-center ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                          <div className="p-2 rounded-full bg-blue-500/20 mr-3">
+                            <Battery size={20} />
+                          </div>
+                          <p className="text-lg">
+                            Your emotions have been steady, like a calm river. There's beauty in consistency, and I'm proud of how you're maintaining your balance. 🌊
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            {/* Right Side - Actions */}
+            <div className={`relative rounded-3xl shadow-2xl backdrop-blur-lg transition-all duration-300 hover:shadow-3xl ${
+              isDarkMode 
+                ? 'bg-white/5 border border-white/10' 
+                : 'bg-white/80 border border-white/20'
+            }`}>
+              <div className="p-8">
+                <div className="flex items-center mb-6">
+                  <div className={`p-3 rounded-full ${isDarkMode ? 'bg-pink-500/20' : 'bg-pink-100'} mr-4`}>
+                    <Heart className={`${isDarkMode ? 'text-pink-400' : 'text-pink-600'}`} size={24} />
+                  </div>
+                  <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                    Let's connect with your heart
+                  </h2>
+                </div>
+                
+                {loading ? (
+                  <div className="flex justify-center py-12">
+                    <div className={`animate-spin rounded-full h-12 w-12 border-4 border-transparent ${
+                      isDarkMode ? 'border-t-pink-400' : 'border-t-pink-600'
+                    }`}></div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Mood Picker Modal */}
+                    {showMoodPicker && (
+                      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+                        <div className={`rounded-3xl shadow-2xl max-w-md w-full mx-4 ${
+                          isDarkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white'
+                        }`}>
+                          <div className="p-8">
+                            <div className="flex justify-between items-center mb-6">
+                              <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                                What's in your heart today?
+                              </h3>
+                              <button 
+                                onClick={() => setShowMoodPicker(false)}
+                                className={`p-2 rounded-full transition-colors ${
+                                  isDarkMode ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}
+                              >
+                                <X size={24} />
+                              </button>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                              {Object.entries(moodConfig).map(([key, mood]) => (
+                                <button
+                                  key={key}
+                                  className={`flex flex-col items-center p-4 rounded-2xl border-2 transition-all duration-300 hover:scale-105 ${
+                                    selectedMood === key 
+                                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30' 
+                                      : isDarkMode 
+                                        ? 'border-gray-600 hover:border-indigo-400 bg-gray-800/50' 
+                                        : 'border-gray-200 hover:border-indigo-300 bg-gray-50'
+                                  }`}
+                                  onClick={() => setSelectedMood(key)}
+                                >
+                                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${mood.color} flex items-center justify-center text-3xl mb-3 shadow-lg ${mood.glow}`}>
+                                    {mood.icon}
+                                  </div>
+                                  <span className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                                    {mood.name}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                            
+                            {selectedMood && (
+                              <div className="mb-6">
+                                <label className={`block text-sm font-semibold mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  {['sad', 'stress', 'anxious', 'lowEnergy'].includes(selectedMood)
+                                    ? "I'm sorry you're going through this. Want to share what's weighing on your heart?"
+                                    : "That's wonderful to hear! What's bringing you this feeling?"}
+                                </label>
+                                <textarea
+                                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${
+                                    isDarkMode 
+                                      ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400' 
+                                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                                  }`}
+                                  rows={3}
+                                  placeholder="Your thoughts are safe with me..."
+                                  value={moodReason}
+                                  onChange={(e) => setMoodReason(e.target.value)}
+                                />
+                                <p className={`text-xs mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  This helps me understand you better and provide more caring support.
+                                </p>
+                              </div>
+                            )}
+                            
+                            <div className="flex justify-end space-x-4">
+                              <button
+                                className={`px-6 py-3 text-sm font-semibold rounded-xl transition-all ${
+                                  isDarkMode 
+                                    ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' 
+                                    : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
+                                }`}
+                                onClick={() => {
+                                  setShowMoodPicker(false);
+                                  setSelectedMood(null);
+                                  setMoodReason('');
+                                }}
+                              >
+                                Maybe later
+                              </button>
+                              <button
+                                className={`px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 ${
+                                  !selectedMood ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''
+                                }`}
+                                onClick={logMood}
+                                disabled={!selectedMood || submitting}
+                              >
+                                {submitting ? 'Saving your heart...' : 'Share with me'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
-          {loading ? (
-            <div className="text-center py-16">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-500 mx-auto mb-4"></div>
-              <p className="text-xl text-gray-600">Loading your mood journey...</p>
+                    {/* Action Cards */}
+                    {showMoodLog && (
+                      <div className={`rounded-2xl p-6 border-2 border-dashed transition-all duration-300 hover:shadow-lg ${
+                        isDarkMode 
+                          ? 'bg-yellow-900/20 border-yellow-500/50 hover:bg-yellow-900/30' 
+                          : 'bg-yellow-50 border-yellow-300 hover:bg-yellow-100'
+                      }`}>
+                        <h3 className={`font-bold text-lg mb-3 ${isDarkMode ? 'text-yellow-300' : 'text-yellow-800'}`}>
+                          Tell me about your day 🌅
+                        </h3>
+                        <p className={`mb-4 text-lg ${isDarkMode ? 'text-yellow-200' : 'text-yellow-700'}`}>
+                          I'd love to hear how you're feeling right now. Your emotions matter, and sharing them helps me understand your beautiful, unique journey.
+                        </p>
+                        <button
+                          onClick={() => setShowMoodPicker(true)}
+                          className={`inline-flex items-center font-semibold text-lg transition-all duration-300 hover:scale-105 ${
+                            isDarkMode ? 'text-yellow-300 hover:text-yellow-200' : 'text-yellow-700 hover:text-yellow-600'
+                          }`}
+                        >
+                          Open your heart to me <ChevronRight className="ml-2" size={20} />
+                        </button>
+                      </div>
+                    )}
+
+                    {showTest && (
+                      <div className={`rounded-2xl p-6 border-2 border-dashed transition-all duration-300 hover:shadow-lg ${
+                        isDarkMode 
+                          ? 'bg-blue-900/20 border-blue-500/50 hover:bg-blue-900/30' 
+                          : 'bg-blue-50 border-blue-300 hover:bg-blue-100'
+                      }`}>
+                        <h3 className={`font-bold text-lg mb-3 ${isDarkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                          Let's dive deeper together 🔍
+                        </h3>
+                        <p className={`mb-4 text-lg ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                          I'd love to understand you on a deeper level. Let's explore your emotional landscape together with some gentle questions.
+                        </p>
+                        <button className={`inline-flex items-center font-semibold text-lg transition-all duration-300 hover:scale-105 ${
+                          isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-700 hover:text-blue-600'
+                        }`}>
+                          Start our journey <ChevronRight className="ml-2" size={20} />
+                        </button>
+                      </div>
+                    )}
+
+                    {showResources && (
+                      <div className={`rounded-2xl p-6 border-2 border-dashed transition-all duration-300 hover:shadow-lg ${
+                        isDarkMode 
+                          ? 'bg-purple-900/20 border-purple-500/50 hover:bg-purple-900/30' 
+                          : 'bg-purple-50 border-purple-300 hover:bg-purple-100'
+                      }`}>
+                        <h3 className={`font-bold text-lg mb-3 ${isDarkMode ? 'text-purple-300' : 'text-purple-800'}`}>
+                          I have something special for you ✨
+                        </h3>
+                        <p className={`mb-4 text-lg ${isDarkMode ? 'text-purple-200' : 'text-purple-700'}`}>
+                          Based on our conversations and your beautiful emotional journey, I've gathered some resources that I think will speak to your heart.
+                        </p>
+                        <button
+                          className={`inline-flex items-center font-semibold text-lg transition-all duration-300 hover:scale-105 ${
+                            isDarkMode ? 'text-purple-300 hover:text-purple-200' : 'text-purple-700 hover:text-purple-600'
+                          }`}
+                          onClick={() => {
+                            navigate('/resources');
+                          }}
+                        >
+                          Discover what I found <ChevronRight className="ml-2" size={20} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#6B7280" 
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis 
-                    domain={[0, 5]} 
-                    stroke="#6B7280" 
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    ticks={[1, 2, 3, 4, 5]}
-                    tickFormatter={(value) => {
-                      const labels = ['', 'Low', 'Fair', 'Good', 'Great', 'Excellent'];
-                      return labels[value];
-                    }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="url(#colorGradient)"
-                    strokeWidth={4}
-                    dot={<CustomDot />}
-                    activeDot={{ r: 12, stroke: '#6366F1', strokeWidth: 2 }}
-                  />
-                  <defs>
-                    <linearGradient id="colorGradient" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#6366F1" />
-                      <stop offset="100%" stopColor="#A855F7" />
-                    </linearGradient>
-                  </defs>
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default MoodLineChartPage;
+export default MoodDashboard;

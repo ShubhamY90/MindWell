@@ -8,7 +8,7 @@ import Community from '../pages/Community';
 import Resources from '../pages/Resources'; 
 import ChatWindow  from '../components/Chatbot/ChatWindow';
 import { onAuthStateChanged } from 'firebase/auth';
-import MoodTracker from '../pages/MoodTracker'
+import MoodDashboard from '../pages/MoodTracker'
 import { auth } from '../context/firebase/firebase';
 import './App.css';
 
@@ -48,7 +48,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/test" element={<Test />} />
-            <Route path="/therapies" element={<MoodTracker user={currentUser} />} />
+            <Route path="/therapies" element={<MoodDashboard user={currentUser} />} />
             <Route path='/auth' element={<Auth/>} />
             <Route path='/community' element={<Community/>} />
             <Route path="/resources" element={<Resources/>} />

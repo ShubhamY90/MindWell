@@ -20,7 +20,7 @@ const LoadingIndicator = ({ darkMode }) => {
           </div>
           <span className={`text-sm ${
             darkMode ? 'text-gray-400' : 'text-gray-500'
-          }`}>Getting response...</span>
+          }`}>typing...</span>
         </div>
       </div>
     </div>
