@@ -14,6 +14,7 @@ import PrivacyPolicy from '../pages/PrivacyPolicy';
 import CookiePolicy from '../pages/CookiePolicy';
 import TermsOfService from '../pages/TermsOfService';
 import './App.css';
+import MentalWellnessResources from '../pages/WellnessResources';
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -55,6 +56,7 @@ function App() {
             <Route path='/auth' element={<Auth/>} />
             <Route path='/community' element={<Community/>} />
             <Route path="/resources" element={<Resources/>} />
+            <Route path="/resourcess" element={<MentalWellnessResources/>} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/cookie-policy" element={<CookiePolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
