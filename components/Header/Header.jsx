@@ -84,7 +84,7 @@ export const Header = () => {
                     ${isScrolled ? 'text-lg' : 'text-xl'}
                   `}
                 >
-                  NeuroSync
+                  MindWell
                 </h1>
               </Link>
 

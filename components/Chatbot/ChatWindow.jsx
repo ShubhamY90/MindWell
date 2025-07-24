@@ -8,6 +8,7 @@ import ChatInput from './ChatInput';
 import MessageBubble from './MessageBubble';
 import LoadingIndicator from './LoadingIndicator';
 import SessionPanel from './SessionPanel';
+import { decryptText } from '../../src/utils/encryption';
 
 const ChatWindow = ({ darkMode, toggleDarkMode }) => {
   const [showHistory, setShowHistory] = useState(true);
@@ -34,6 +35,7 @@ const ChatWindow = ({ darkMode, toggleDarkMode }) => {
     scrollToBottom();
   }, [messages, showHistory]);
 
+  
   const fetchSessions = async () => {
     setIsLoadingHistory(true);
     try {
@@ -63,7 +65,21 @@ const ChatWindow = ({ darkMode, toggleDarkMode }) => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load session');
-      loadSession(data.session);
+  
+      // 🔐 Decrypt history
+      const decryptedHistory = await Promise.all(
+        data.session.history.map(async (msg) => ({
+          role: msg.role,
+          parts: [{ text: await decryptText(msg.parts[0].text) }],
+          videos: msg.videos || [],
+        }))
+      );
+  
+      loadSession({
+        sessionRef: data.session.sessionRef,
+        history: decryptedHistory,
+      });
+  
       setShowHistory(false);
     } catch (err) {
       console.error('Failed to load session:', err.message);

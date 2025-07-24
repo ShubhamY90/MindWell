@@ -12,7 +12,7 @@ import MoodDashboard from '../pages/MoodTracker'
 import { auth } from '../context/firebase/firebase';
 import PrivacyPolicy from '../pages/PrivacyPolicy';
 import CookiePolicy from '../pages/CookiePolicy';
-import TermsOfService from '../pages/TermsOfService';
+import {TermsOfService} from '../pages/TermsOfService';
 import './App.css';
 import MentalWellnessResources from '../pages/WellnessResources';
 

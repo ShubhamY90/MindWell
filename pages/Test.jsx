@@ -7,6 +7,7 @@ import { Heart, Sparkles, Star, Zap, CheckCircle, ArrowRight, RotateCcw, Externa
 import { getAuth } from "firebase/auth";
 import { collection, doc, setDoc, updateDoc, Timestamp, getDoc, increment } from "firebase/firestore";
 import { db } from "../context/firebase/firebase";
+import ReactMarkdown from 'react-markdown';
 
 const answerOptions = {
   anxiety: [
@@ -271,7 +272,10 @@ export default function MentalHealthQuestionnaire() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [happyResponse, setHappyResponse] = useState('');
   const [showHappyResult, setShowHappyResult] = useState(false);
-
+  const [moodAnalysis, setMoodAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
+  const [showDetailed, setShowDetailed] = useState(false);
   const auth = getAuth();
 
   // Load saved state from localStorage on component mount
@@ -446,6 +450,74 @@ export default function MentalHealthQuestionnaire() {
     setShowWelcome(true);
     setHappyResponse('');
     setShowHappyResult(false);
+    setShowDetailed(false);
+    setMoodAnalysis(null);
+  };
+
+  const fetchMoodAnalysis = async () => {
+    if (!result || selectedMood === 'happy') return;
+  
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+  
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+  
+      // Prepare the complete assessment data to send
+      const assessmentData = {
+        moodType: selectedMood,
+        score: result.score,
+        level: result.level,
+        answers: questions.map((question, index) => ({
+          question: question.text,
+          answer: answerOptions[selectedMood]?.find(opt => opt.value === answers[index])?.label || "",
+          value: answers[index]
+        })),
+        date: new Date().toISOString()
+      };
+  
+      // Log what we're sending to the backend
+      console.log("Sending complete assessment to analyzeMoodTest:", JSON.stringify(assessmentData, null, 2));
+  
+      const response = await fetch("http://localhost:4000/api/analyzeMoodTest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(assessmentData)
+      });
+  
+      if (!response.ok) {
+        throw new Error("API request failed");
+      }
+  
+      const data = await response.json();
+      console.log("Analysis results:", data);
+  
+      setMoodAnalysis({
+        summary: data.analysis,
+        recommendations: data.recommendations || [
+          "Practice mindfulness meditation for 10 minutes daily",
+          "Engage in regular physical activity",
+          "Maintain a consistent sleep schedule",
+          "Connect with supportive friends or family",
+          "Consider journaling to process emotions"
+        ],
+        insights: data.insights || [
+          `Your ${selectedMood} levels are currently marked as ${result.level}.`,
+          "Your mood may be affected by specific recurring patterns.",
+          "Try observing how your mood shifts throughout the day."
+        ]
+      });
+  
+      setShowDetailed(true);
+    } catch (error) {
+      console.error("Error fetching mood analysis:", error);
+      setAnalysisError("Failed to load detailed analysis. Please try again later.");
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const saveResultsToFirestore = async (mood, answers, questions, result) => {
@@ -710,7 +782,7 @@ export default function MentalHealthQuestionnaire() {
                   <div className="max-w-xl mx-auto aspect-video rounded-xl overflow-hidden shadow-xl border border-white/20">
                     <iframe
                       className="w-full h-full"
-                      src={result.video.replace("watch?v=", "embed/")}
+                      src={result.video ? result.video.replace("watch?v=", "embed/") : "https://www.youtube.com/embed/d-diB65scQU"}
                       frameBorder="0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
@@ -748,7 +820,7 @@ export default function MentalHealthQuestionnaire() {
       <div className="min-h-screen w-screen flex flex-col p-3 overflow-x-hidden">
         <FuturisticBackground />
         <div className="flex-1 flex items-center justify-center pt-[81px]">
-          <div className="w-full max-w-3xl mx-auto">
+          <div className="w-full max-w-6xl mx-auto">
             <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/30 p-6 md:p-9">
               <div className="text-center space-y-7">
                 <div className="space-y-4">
@@ -780,42 +852,109 @@ export default function MentalHealthQuestionnaire() {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-gray-50/80 to-gray-100/80 backdrop-blur-sm rounded-2xl p-6 space-y-4 border border-white/30">
-                  <div className="flex items-center justify-center space-x-2">
-                    <Zap className="w-5 h-5 text-purple-600" />
-                    <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                      Curated Resource
-                    </h3>
+                {showDetailed && moodAnalysis ? (
+                  <div className="bg-gradient-to-br from-gray-50/80 to-gray-100/80 backdrop-blur-sm rounded-2xl p-6 space-y-4 border border-white/30">
+                    <div className="flex items-center justify-center space-x-2">
+                      <Brain className="w-5 h-5 text-purple-600" />
+                      <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        Detailed Analysis
+                      </h3>
+                    </div>
+                    
+                    <div className="space-y-4 text-left">
+                      <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Summary</h4>
+                        <div className="text-gray-600">
+                          <ReactMarkdown>{moodAnalysis.summary}</ReactMarkdown>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Key Insights</h4>
+                        <ul className="list-disc list-inside space-y-1 text-gray-600">
+                          {moodAnalysis.insights.map((insight, i) => (
+                            <li key={i}>{insight}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Recommendations</h4>
+                        <ul className="list-disc list-inside space-y-1 text-gray-600">
+                          {moodAnalysis.recommendations.map((rec, i) => (
+                            <li key={i}>{rec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="max-w-xl mx-auto aspect-video rounded-xl overflow-hidden shadow-xl border border-white/20">
-                    <iframe
-                      className="w-full h-full"
-                      src={result.video.replace("watch?v=", "embed/")}
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      title="Wellness Resource"
-                    />
+                ) : (
+                  <div className="bg-gradient-to-br from-gray-50/80 to-gray-100/80 backdrop-blur-sm rounded-2xl p-6 space-y-4 border border-white/30">
+                    <div className="flex items-center justify-center space-x-2">
+                      <Zap className="w-5 h-5 text-purple-600" />
+                      <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        Curated Resource
+                      </h3>
+                    </div>
+                    
+                    <div className="max-w-xl mx-auto aspect-video rounded-xl overflow-hidden shadow-xl border border-white/20">
+                      <iframe
+                        className="w-full h-full"
+                        src={result.video ? result.video.replace("watch?v=", "embed/") : "https://www.youtube.com/embed/d-diB65scQU"}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title="Wellness Resource"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  {!showDetailed ? (
+                    <Button 
+                      onClick={fetchMoodAnalysis}
+                      disabled={isAnalyzing}
+                      className="bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 hover:from-purple-700 hover:via-pink-700 hover:to-cyan-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20"
+                    >
+                      {isAnalyzing ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <Brain className="w-4 h-4 mr-2" />
+                          Show Detailed Results
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={() => setShowDetailed(false)}
+                      className="bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 hover:from-purple-700 hover:via-pink-700 hover:to-cyan-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back to Results
+                    </Button>
+                  )}
+                  
                   <Button 
                     onClick={resetQuiz}
-                    className="bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 hover:from-purple-700 hover:via-pink-700 hover:to-cyan-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20"
-                  >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Take Assessment Again
-                  </Button>
-                  <Button 
                     variant="outline"
                     className="border-2 border-gray-300 hover:border-gray-400 bg-white/80 backdrop-blur-sm px-8 py-3 rounded-xl font-bold transition-all duration-300 hover:shadow-md"
                   >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Explore Resources
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Take Again
                   </Button>
                 </div>
+                
+                {analysisError && (
+                  <div className="text-red-500 text-sm mt-2">{analysisError}</div>
+                )}
               </div>
             </div>
           </div>
